@@ -1,0 +1,16 @@
+; Rust 확장(godot-ext 크레이트) 연결. 먼저 저장소 루트에서 `cargo build` 를 해야 한다.
+
+[configuration]
+
+entry_symbol = "gdext_rust_init"
+compatibility_minimum = 4.2
+reloadable = true
+
+[libraries]
+
+macos.debug = "res://../target/debug/libcrab_godot.dylib"
+macos.release = "res://../target/release/libcrab_godot.dylib"
+linux.debug.x86_64 = "res://../target/debug/libcrab_godot.so"
+linux.release.x86_64 = "res://../target/release/libcrab_godot.so"
+windows.debug.x86_64 = "res://../target/debug/crab_godot.dll"
+windows.release.x86_64 = "res://../target/release/crab_godot.dll"

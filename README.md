@@ -7,42 +7,60 @@
 
 ## 기술 스택
 
-[Tauri 2](https://tauri.app) 앱이다.
+[Godot 4](https://godotengine.org) 게임이고, 게임 로직은 Rust 로 짜서 [godot-rust](https://godot-rust.github.io) 로 붙였다.
 
-- **백엔드 (Rust)** — 플레이어 코드를 `rustc` 로 컴파일·실행하고, 월드를 시뮬레이션한다.
-- **화면 (웹뷰)** — 빌드 도구 없는 순수 HTML/CSS/JS. 에디터는 [Monaco](https://microsoft.github.io/monaco-editor/)(VS Code 의 에디터), 맵은 Canvas 로 그린다.
+- **core/ (Rust)** — 레벨, 레슨, 월드 시뮬레이션. 플레이어 코드를 `rustc` 로 컴파일·실행한다.
+- **godot-ext/ (Rust)** — core 를 Godot 에 `CrabCore` 클래스로 연결하는 확장.
+- **game/ (Godot)** — 화면. 에디터는 Godot 의 CodeEdit, 맵과 연출·효과음은 GDScript 로 그린다.
 
 ## 실행
 
-Rust 툴체인(`rustc`, `cargo`)만 있으면 된다. Node 나 npm 은 필요 없다.
+Rust 툴체인(`rustc`, `cargo`)과 Godot 4.7 이 필요하다 (`brew install --cask godot`).
 
 ```
-cargo run --release
+cargo build                 # Rust 확장을 먼저 빌드한다
+godot --path game           # 게임 실행
+godot -e --path game        # Godot 에디터로 열기
 ```
 
-- 실행: F5 또는 Cmd+Enter
-- 입력을 멈추면 컴파일 에러가 에디터에 밑줄로 표시된다.
-- 게임 함수(`move_forward` 등)는 자동 완성되고, 마우스를 올리면 설명이 나온다.
-- 코드와 진행 상황은 `~/.crab-code/` 에 저장된다.
+- 실행: F5
+- 에디터는 VS Code 기본 단축키를 따른다 (macOS 는 Cmd, 다른 OS 는 Ctrl). 전체 목록은 `game/scripts/code_editor.gd` 맨 위에 있다.
+  - 편집: `Cmd+/` 주석, `Shift+Alt+A` 블록 주석, `Alt+↑/↓` 줄 옮기기, `Shift+Alt+↑/↓` 줄 복사, `Cmd+Shift+K` 줄 지우기, `Cmd+Enter` 아래에 새 줄, `Cmd+]/[` 들여쓰기
+  - 선택: `Cmd+D` 다음 같은 단어, `Cmd+Shift+L` 모두, `Alt+Cmd+↑/↓` 캐럿 추가, `Cmd+L` 줄, `Shift+Alt+→/←` 넓히기/좁히기
+  - 찾기: `Cmd+F`, `Alt+Cmd+F`(Windows `Ctrl+H`) 바꾸기, `F3`/`Cmd+G` 다음, `Ctrl+G` 줄 이동
+  - 그 밖에: `F8` 다음 문제, `Ctrl+Space` 자동 완성, `Cmd+Shift+Space` 매개변수 힌트, `Shift+Alt+F` rustfmt 정리, `Alt+Cmd+[`/`]` 접기, `Alt+Z` 줄 바꿈, `Cmd+=`/`-` 글자 크기
+- 입력을 멈추면 컴파일 에러가 에디터에 물결 밑줄로 표시되고, 마우스를 올리면 메시지가 나온다.
+- 레슨 본문은 마크다운으로 그린다 (`game/scripts/markdown_view.gd`): 인라인 코드, 굵게·기울임, 링크, 제목, 목록, 인용, 코드 블록, "목표:" 콜아웃. 인라인 코드를 누르면 복사된다.
+- 코드와 진행 상황은 Godot 의 사용자 폴더(`user://save.json`)에 저장된다. 예전 버전의 `~/.crab-code/` 저장은 처음 실행할 때 가져온다.
+
+개발용 환경 변수: `CRAB_START=레벨번호`, `CRAB_DEMO=1`(정답 자동 실행) 또는 `start`(시작 코드 실행), `CRAB_SHOT=파일.png`(몇 초 뒤 화면을 찍고 종료).
+
+## 테스트
+
+```
+godot --headless --path game -s tests/keymap_test.gd          # 에디터 단축키 (실제 에디터에 키 입력)
+godot --path game -s tests/markdown_shot.gd -- markdown.png   # 마크다운 미리 보기를 그림으로
+```
 
 ## 레벨 검증
 
 모든 레벨의 정답 코드가 통과하고 시작 코드는 통과하지 못하는지 실제로 컴파일해서 확인한다.
 
 ```
-cargo run --release -- --verify
+cargo run --release --bin verify
 ```
 
 ## 구조
 
-- `src/main.rs` — Tauri 명령(화면에서 부르는 함수)과 레벨 검증.
-- `src/sim.rs` — 월드 시뮬레이션과 레벨 지도. 게임과 플레이어 프로그램이 함께 쓴다.
-- `src/runner.rs` — 플레이어 코드를 `rustc` 로 컴파일하고 실행한다.
-- `src/lessons.rs` — 레슨 본문, 시작 코드, 정답.
-- `runtime/crab.rs` — 플레이어 코드에서 부르는 함수들 (`move_forward`, `collect` 등).
-- `ui/` — 화면. `app.js` 가 전부이고, `vendor/monaco/` 는 Monaco 배포본(Rust 문법만 남김)이다.
+- `core/src/game.rs` — 화면이 부르는 기능(레슨 목록, 실행, 검사)과 레벨 검증.
+- `core/src/sim.rs` — 월드 시뮬레이션과 레벨 지도. 게임과 플레이어 프로그램이 함께 쓴다.
+- `core/src/runner.rs` — 플레이어 코드를 `rustc` 로 컴파일하고 실행한다.
+- `core/src/lessons.rs` — 레슨 본문, 시작 코드, 정답.
+- `core/runtime/crab.rs` — 플레이어 코드에서 부르는 함수들 (`move_forward`, `collect` 등).
+- `godot-ext/src/lib.rs` — `CrabCore`: 컴파일은 백그라운드 스레드에서 돌리고 화면이 결과를 받아 간다.
+- `game/main.tscn` — 화면 배치. `game/scripts/` 에 스크립트:
+  `main.gd`(전체 흐름), `code_editor.gd`(에디터·단축키), `find_bar.gd`(찾기·바꾸기), `markdown_view.gd`(레슨 본문), `world_view.gd`(맵·애니메이션), `sfx.gd`(효과음), `crab_art.gd`(꽃게·보석 그림).
 
 ## 함께 들어 있는 것
 
-- [Monaco Editor](https://github.com/microsoft/monaco-editor) 0.52.2 — MIT (`ui/vendor/monaco/LICENSE`)
-- [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), [Pretendard](https://github.com/orioncactus/pretendard) — SIL Open Font License 1.1 (`ui/fonts/`)
+- [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), [Pretendard](https://github.com/orioncactus/pretendard) — SIL Open Font License 1.1 (`game/fonts/`)
