@@ -1,15 +1,21 @@
 // 플레이어 코드를 진짜 rustc 로 컴파일하고 실행해서, 행동 목록을 돌려준다.
 
 use crate::sim::Action;
+use serde_json::Value;
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 const SIM_SRC: &str = include_str!("sim.rs");
 const CRAB_SRC: &str = include_str!("../runtime/crab.rs");
 const MAIN_SRC: &str = "#[allow(warnings)]\nmod sim;\n#[allow(warnings)]\nmod crab;\n#[allow(unused_imports)]\nuse crab::*;\ninclude!(\"user.rs\");\n";
 const RUN_TIMEOUT: Duration = Duration::from_secs(4);
+
+// 실행과 입력 중 검사가 서로의 파일을 덮어쓰지 않도록 폴더와 잠금을 따로 둔다.
+static RUN_LOCK: Mutex<()> = Mutex::new(());
+static CHECK_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Clone, Debug)]
 pub enum OutLine {
@@ -19,11 +25,28 @@ pub enum OutLine {
     Print(String),
 }
 
+/// 에디터에 표시할 컴파일러 진단. 줄과 칸은 1부터 센다.
+#[derive(Clone, Debug)]
+pub struct Diagnostic {
+    pub line: usize,
+    pub col: usize,
+    pub end_line: usize,
+    pub end_col: usize,
+    pub message: String,
+    pub error: bool,
+}
+
+#[derive(Debug, Default)]
+pub struct Compiled {
+    pub ok: bool,
+    /// 사람이 읽는 컴파일러 출력 (에러 또는 경고).
+    pub output: String,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
 #[derive(Debug, Default)]
 pub struct RunResult {
-    pub compiled: bool,
-    /// 컴파일러 출력 (에러 또는 경고).
-    pub compiler_output: String,
+    pub compiled: Compiled,
     pub lines: Vec<OutLine>,
     pub timed_out: bool,
     /// 실행 중 표준 에러 (패닉 메시지 등).
@@ -31,12 +54,12 @@ pub struct RunResult {
     pub crashed: bool,
 }
 
-fn work_dir() -> PathBuf {
-    std::env::temp_dir().join(format!("crab-code-{}", std::process::id()))
+fn work_dir(kind: &str) -> PathBuf {
+    std::env::temp_dir().join(format!("crab-code-{}", std::process::id())).join(kind)
 }
 
 fn rustc_command() -> Command {
-    // 터미널이 아닌 곳에서 실행되면 PATH 에 cargo 경로가 없을 수 있다.
+    // 앱을 Finder 에서 실행하면 PATH 에 cargo 경로가 없을 수 있다.
     if let Ok(home) = std::env::var("HOME") {
         let candidate = PathBuf::from(home).join(".cargo/bin/rustc");
         if Command::new("rustc").arg("--version").output().is_err() && candidate.exists() {
@@ -46,43 +69,108 @@ fn rustc_command() -> Command {
     Command::new("rustc")
 }
 
-pub fn run(code: &str, level: usize, seed: u64) -> RunResult {
-    let mut result = RunResult::default();
-    let dir = work_dir();
+/// rustc 의 JSON 진단 한 줄을 읽어 출력 글과 에디터용 진단으로 나눈다.
+fn read_diagnostic(json: &Value, out: &mut Compiled) {
+    if let Some(rendered) = json["rendered"].as_str() {
+        out.output.push_str(rendered);
+    }
+    let level = json["level"].as_str().unwrap_or("");
+    if level != "error" && level != "warning" {
+        return;
+    }
+    let spans = json["spans"].as_array().cloned().unwrap_or_default();
+    let in_user = |s: &&Value| s["file_name"].as_str() == Some("user.rs");
+    let Some(span) = spans.iter().filter(in_user).find(|s| s["is_primary"] == true).or(spans.iter().find(in_user)) else {
+        return;
+    };
+    let mut message = json["message"].as_str().unwrap_or("").to_string();
+    if let Some(code) = json["code"]["code"].as_str() {
+        message = format!("{message} [{code}]");
+    }
+    if let Some(label) = span["label"].as_str() {
+        message.push_str(&format!("\n{label}"));
+    }
+    for child in json["children"].as_array().into_iter().flatten() {
+        if let (Some(level), Some(text)) = (child["level"].as_str(), child["message"].as_str()) {
+            message.push_str(&format!("\n{level}: {text}"));
+        }
+    }
+    let num = |key: &str| span[key].as_u64().unwrap_or(1) as usize;
+    out.diagnostics.push(Diagnostic {
+        line: num("line_start"),
+        col: num("column_start"),
+        end_line: num("line_end"),
+        end_col: num("column_end"),
+        message,
+        error: level == "error",
+    });
+}
+
+/// 컴파일한다. check_only 면 실행 파일을 만들지 않고 검사만 한다 (더 빠르다).
+fn compile(kind: &str, code: &str, check_only: bool) -> (Compiled, PathBuf) {
+    let mut out = Compiled::default();
+    let dir = work_dir(kind);
+    let exe = dir.join(if cfg!(windows) { "prog.exe" } else { "prog" });
     let setup = std::fs::create_dir_all(&dir)
         .and_then(|_| std::fs::write(dir.join("sim.rs"), SIM_SRC))
         .and_then(|_| std::fs::write(dir.join("crab.rs"), CRAB_SRC))
         .and_then(|_| std::fs::write(dir.join("main.rs"), MAIN_SRC))
         .and_then(|_| std::fs::write(dir.join("user.rs"), code));
     if let Err(e) = setup {
-        result.compiler_output = format!("임시 폴더를 준비하지 못했어요: {e}");
-        return result;
+        out.output = format!("임시 폴더를 준비하지 못했어요: {e}");
+        return (out, exe);
     }
 
-    let exe = dir.join(if cfg!(windows) { "prog.exe" } else { "prog" });
-    let compile = rustc_command()
-        .current_dir(&dir)
-        .args(["--edition", "2021", "--color", "never", "-C", "debuginfo=0", "-o"])
-        .arg(&exe)
-        .arg("main.rs")
-        .output();
-    let compile = match compile {
-        Ok(out) => out,
+    let mut cmd = rustc_command();
+    cmd.current_dir(&dir)
+        .args(["--edition", "2021", "--error-format=json", "-C", "debuginfo=0"]);
+    if check_only {
+        cmd.arg("--emit=metadata").arg("-o").arg(dir.join("check.rmeta"));
+    } else {
+        cmd.arg("-o").arg(&exe);
+    }
+    let result = match cmd.arg("main.rs").output() {
+        Ok(result) => result,
         Err(e) => {
-            result.compiler_output = format!(
+            out.output = format!(
                 "rustc 를 실행하지 못했어요: {e}\nRust 가 설치되어 있는지 확인해 주세요 (https://rustup.rs)."
             );
-            return result;
+            return (out, exe);
         }
     };
-    result.compiler_output = String::from_utf8_lossy(&compile.stderr).trim_end().to_string();
-    if !compile.status.success() {
+    for line in String::from_utf8_lossy(&result.stderr).lines() {
+        match serde_json::from_str::<Value>(line) {
+            Ok(json) => read_diagnostic(&json, &mut out),
+            Err(_) => {
+                out.output.push_str(line);
+                out.output.push('\n');
+            }
+        }
+    }
+    out.output = out.output.trim_end().to_string();
+    out.ok = result.status.success();
+    (out, exe)
+}
+
+/// 실행하지 않고 컴파일 에러만 확인한다 (입력 중 밑줄 표시용).
+pub fn check(code: &str) -> Compiled {
+    let _guard = CHECK_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    compile("check", code, true).0
+}
+
+pub fn run(code: &str, level: usize, seed: u64) -> RunResult {
+    let _guard = RUN_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let (compiled, exe) = compile("run", code, false);
+    let mut result = RunResult {
+        compiled,
+        ..Default::default()
+    };
+    if !result.compiled.ok {
         return result;
     }
-    result.compiled = true;
 
     let child = Command::new(&exe)
-        .current_dir(&dir)
+        .current_dir(work_dir("run"))
         .env("CRAB_LEVEL", level.to_string())
         .env("CRAB_SEED", seed.to_string())
         .stdin(Stdio::null())
@@ -148,13 +236,5 @@ pub fn run(code: &str, level: usize, seed: u64) -> RunResult {
 }
 
 pub fn cleanup() {
-    let _ = std::fs::remove_dir_all(work_dir());
-}
-
-/// 컴파일러 출력에서 플레이어 코드의 첫 에러 줄 번호(1부터)를 찾는다.
-pub fn first_error_line(output: &str) -> Option<usize> {
-    let idx = output.find("user.rs:")?;
-    let rest = &output[idx + "user.rs:".len()..];
-    let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
-    digits.parse().ok()
+    let _ = std::fs::remove_dir_all(std::env::temp_dir().join(format!("crab-code-{}", std::process::id())));
 }

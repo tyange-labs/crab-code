@@ -1,14 +1,11 @@
 [package]
 name = "crab-code"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
 [dependencies]
-macroquad = "0.4"
-
-# 한글 폰트(글리프 수만 개)를 읽는 속도 때문에 개발 빌드에서도 의존성은 최적화한다.
-[profile.dev]
-opt-level = 1
-
-[profile.dev.package."*"]
-opt-level = 3
+tauri = { version = "2", features = [] }
+serde_json = "1"
