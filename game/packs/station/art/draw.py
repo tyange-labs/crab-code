@@ -159,6 +159,37 @@ def slot_tile():
     return im
 
 
+BLUE = C("#4aa8ff")
+
+
+def door_tile(col):
+    im = blank(16, 16, WALL_LO)
+    rect(im, 0, 0, 15, 0, WALL_HI)
+    rect(im, 0, 0, 0, 15, WALL_HI)
+    rect(im, 15, 0, 15, 15, INK)
+    rect(im, 0, 15, 15, 15, INK)
+    rect(im, 3, 2, 12, 13, C("#161c2e"))   # 문짝
+    rect(im, 7, 2, 8, 13, C("#0c1020"))   # 가운데 틈
+    rect(im, 5, 6, 10, 9, INK)
+    rect(im, 6, 7, 9, 8, col)             # 잠금 표시
+    rect(im, 6, 6, 9, 6, blend(col, INK, 0.5))
+    for y in (3, 12):
+        px(im, 4, y, col)
+        px(im, 11, y, col)
+    return im
+
+
+def card_tile(col):
+    im = deck_tile(0)
+    rect(im, 4, 5, 11, 10, INK)
+    rect(im, 5, 6, 10, 9, col)
+    rect(im, 5, 6, 10, 6, blend(col, WHITE, 0.55))
+    rect(im, 5, 9, 7, 9, blend(col, INK, 0.45))
+    for x in (4, 11):
+        px(im, x, 4, (col[0], col[1], col[2], 90))
+    return im
+
+
 def build_tiles():
     tiles = [
         space_tile(0), space_tile(1),
@@ -168,6 +199,7 @@ def build_tiles():
         void_tile(0), void_tile(1),
         vent_overlay(0), vent_overlay(1),
         reactor_tile(), slot_tile(),
+        door_tile(RED), door_tile(BLUE), card_tile(RED), card_tile(BLUE),
     ]
     atlas = blank(16 * len(tiles), 16)
     for i, t in enumerate(tiles):

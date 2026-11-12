@@ -9,8 +9,8 @@ Rust 로 게임 속 세계를 움직이며 Rust 를 배우는 게임. 지금 들
 - 작업 폴더는 git 저장소다. 레벨을 깨면 커밋이 남고, 최고 기록에는 `best/<팩>/<레벨>` 태그가 붙는다.
 - 게임 자체는 **게임팩** 으로 갈아끼운다 (`game/packs/<id>/` 폴더 하나가 팩 하나, 폴더를 넣고 빼면 된다). 지금 들어 있는 팩:
   - **정거장 복구** (`station`) — `Bot` 트레이트를 구현해 정비 로봇의 두뇌를 만든다. 걷기 → 집기·장착 → Option → 필드와 &mut self →
-    진공 enum → 경비 드론과 여러 대 → 설치·충전(튜플 match) → 회수 작전(Vec) …. 19개 레벨 (8: Vec·반복자, 9: 로봇 3대와 enum 으로 나눈 일,
-    10: impl 로 코드 나누기, 11: trait 로 만든 작업 목록, 12: Result 와 ?, 13: HashMap 으로 지도 기억하기, 14: static·Mutex 통신 채널, 15: &str·라이프타임으로 레이더 글 해독, 16: Rc·RefCell 로 장부 공유, 17: 스레드·채널로 경로 계산, 18: 제네릭과 trait 경계, 19: Iterator 직접 구현). 그림은 전부 코드로 그린다(`game/packs/station/art/draw.py`).
+    진공 enum → 경비 드론과 여러 대 → 설치·충전(튜플 match) → 회수 작전(Vec) …. 20개 레벨 (8: Vec·반복자, 9: 로봇 3대와 enum 으로 나눈 일,
+    10: impl 로 코드 나누기, 11: trait 로 만든 작업 목록, 12: Result 와 ?, 13: HashMap 으로 지도 기억하기, 14: static·Mutex 통신 채널, 15: &str·라이프타임으로 레이더 글 해독, 16: Rc·RefCell 로 장부 공유, 17: 스레드·채널로 경로 계산, 18: 제네릭과 trait 경계, 19: Iterator 직접 구현, 20: 키카드·잠긴 문(데이터를 품은 enum)). 그림은 전부 코드로 그린다(`game/packs/station/art/draw.py`).
 
   옛 팩(조수 웅덩이, 퍼즐, 해바라기 농장)은 `game/packs-archive/` 에 보관해 두었다. `game/packs/` 로 옮기면 다시 목록에 뜬다.
 

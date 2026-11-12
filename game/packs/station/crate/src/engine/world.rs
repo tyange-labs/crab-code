@@ -73,6 +73,27 @@ impl Dir {
 
 /// 로봇이 보는 칸.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Hue {
+    Red,
+    Blue,
+}
+
+impl Hue {
+    pub fn code(self) -> &'static str {
+        match self {
+            Hue::Red => "red",
+            Hue::Blue => "blue",
+        }
+    }
+    pub fn ko(self) -> &'static str {
+        match self {
+            Hue::Red => "붉은",
+            Hue::Blue => "푸른",
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Tile {
     /// 갑판. 걸어갈 수 있다.
     Deck,
@@ -94,6 +115,10 @@ pub enum Tile {
     Module,
     /// 충전해서 부팅 중인 모듈.
     Booting,
+    /// 잠긴 문. 같은 색 키카드가 있어야 열린다.
+    Door(Hue),
+    /// 바닥에 놓인 키카드. 밟으면 줍는다.
+    Card(Hue),
 }
 
 impl Tile {
@@ -165,6 +190,7 @@ pub enum Ground {
     Duct,
     Reactor,
     Slot,
+    Door,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -189,6 +215,23 @@ pub struct BotState {
     pub mishap: Mishap,
     /// 경비 드론에게 쫓겨 반응로에 숨어 있는 남은 틱. 그동안은 행동하지 못한다.
     pub hiding: u32,
+    /// 가진 키카드.
+    pub keys: Vec<Hue>,
+}
+
+#[derive(Clone, Debug)]
+pub struct DoorState {
+    pub x: i32,
+    pub y: i32,
+    pub hue: Hue,
+    pub open: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct CardItem {
+    pub x: i32,
+    pub y: i32,
+    pub hue: Hue,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -258,6 +301,9 @@ pub struct View {
     slot_dir: Option<Dir>,
     ripe: Vec<(i32, i32)>,
     radar: String,
+    keys: Vec<Hue>,
+    card_dir: Option<Dir>,
+    door_dir: Option<Dir>,
     size: (i32, i32),
     sight: i32,
     grid: Vec<Tile>,
@@ -310,6 +356,21 @@ impl View {
     /// 반응로로 가는 첫걸음. 이미 반응로 위라면 None.
     pub fn reactor_dir(&self) -> Option<Dir> {
         self.reactor_dir
+    }
+
+    /// 가진 키카드 목록.
+    pub fn keys(&self) -> Vec<Hue> {
+        self.keys.clone()
+    }
+
+    /// 가장 가까운 키카드로 가는 첫걸음. 갈 수 있는 카드가 없으면 None.
+    pub fn card_dir(&self) -> Option<Dir> {
+        self.card_dir
+    }
+
+    /// 가진 키카드로 열 수 있는 가장 가까운 문으로 가는 첫걸음. 없으면 None.
+    pub fn door_dir(&self) -> Option<Dir> {
+        self.door_dir
     }
 
     /// 레이더가 보내는 글. 코어마다 `C:x,y` 를 공백으로 이어 붙이고, 가끔 잡음이 섞인다.
@@ -826,6 +887,28 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 3,
     },
+    Spec {
+        id: "vault",
+        map: &[
+            "###################",
+            "#N....#.......#...#",
+            "#.....#..f....#.f.#",
+            "#..r..R.......B...#",
+            "#.....#..b....#.f.#",
+            "#.....#.......#...#",
+            "###################",
+        ],
+        bots: 1,
+        goal: 3,
+        max_ticks: 160,
+        smell: u32::MAX,
+        pressure: None,
+        random_core: 0,
+        respawn: false,
+        reach: false,
+        slot_sense: true,
+        sight: 40,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();
@@ -839,6 +922,8 @@ pub struct Field {
     pub bots: Vec<BotState>,
     pub cores: Vec<Core>,
     pub slots: Vec<Slot>,
+    pub doors: Vec<DoorState>,
+    pub cards: Vec<CardItem>,
     pub sentries: Vec<Sentry>,
     pub tick: u32,
     pub delivered: u32,
@@ -876,6 +961,8 @@ pub fn build(level: usize, seed: u64) -> Field {
         bots: Vec::new(),
         cores: Vec::new(),
         slots: Vec::new(),
+        doors: Vec::new(),
+        cards: Vec::new(),
         sentries: Vec::new(),
         tick: 0,
         delivered: 0,
@@ -907,6 +994,11 @@ pub fn build(level: usize, seed: u64) -> Field {
                     field.ground[i] = Ground::Reactor;
                     field.reactor = (x, y);
                 }
+                'R' | 'B' => {
+                    field.ground[i] = Ground::Door;
+                    field.doors.push(DoorState { x, y, hue: if ch == 'R' { Hue::Red } else { Hue::Blue }, open: false });
+                }
+                'r' | 'b' => field.cards.push(CardItem { x, y, hue: if ch == 'r' { Hue::Red } else { Hue::Blue } }),
                 'f' => field.cores.push(Core { x, y, home: (x, y), state: CoreState::Ground }),
                 '?' => field.spots.push((x, y)),
                 'g' => field.sentries.push(Sentry { x, y, dir: Dir::East }),
@@ -923,6 +1015,7 @@ pub fn build(level: usize, seed: u64) -> Field {
             facing: Dir::East,
             mishap: Mishap::None,
             hiding: 0,
+            keys: Vec::new(),
         });
     }
     for _ in 0..spec.random_core {
@@ -1011,7 +1104,19 @@ impl Field {
 
     /// 로봇이 걸어 다닐 수 있는 칸 (기압은 따지지 않는다).
     fn walkable(&self, x: i32, y: i32) -> bool {
-        matches!(self.ground_at(x, y), Ground::Deck | Ground::Duct | Ground::Reactor | Ground::Slot)
+        match self.ground_at(x, y) {
+            Ground::Deck | Ground::Duct | Ground::Reactor | Ground::Slot => true,
+            Ground::Door => self.door_at(x, y).map_or(false, |d| d.open),
+            _ => false,
+        }
+    }
+
+    fn door_at(&self, x: i32, y: i32) -> Option<&DoorState> {
+        self.doors.iter().find(|d| d.x == x && d.y == y)
+    }
+
+    fn card_at(&self, x: i32, y: i32) -> Option<&CardItem> {
+        self.cards.iter().find(|c| c.x == x && c.y == y)
     }
 
     fn tile_at(&self, x: i32, y: i32) -> Tile {
@@ -1027,8 +1132,14 @@ impl Field {
             Ground::Void => Tile::Void,
             Ground::Duct if self.vented() => Tile::Void,
             Ground::Reactor => Tile::Reactor,
+            Ground::Door => match self.door_at(x, y) {
+                Some(d) if !d.open => Tile::Door(d.hue),
+                _ => Tile::Deck,
+            },
             g => {
-                if self.core_on_ground(x, y).is_some() {
+                if let Some(c) = self.card_at(x, y) {
+                    Tile::Card(c.hue)
+                } else if self.core_on_ground(x, y).is_some() {
                     Tile::Core
                 } else if g == Ground::Slot {
                     match self.slot_at(x, y).map(|p| p.stage) {
@@ -1057,7 +1168,7 @@ impl Field {
         for d in Dir::ALL {
             let (dx, dy) = d.delta();
             let (x, y) = (from.0 + dx, from.1 + dy);
-            if self.walkable(x, y) && !seen[self.idx(x, y)?] {
+            if (self.walkable(x, y) || is_target(x, y)) && !seen[self.idx(x, y)?] {
                 seen[self.idx(x, y)?] = true;
                 queue.push_back((x, y, d, 1u32));
             }
@@ -1070,7 +1181,7 @@ impl Field {
                 let (dx, dy) = d.delta();
                 let (nx, ny) = (x + dx, y + dy);
                 if let Some(i) = self.idx(nx, ny) {
-                    if self.walkable(nx, ny) && !seen[i] {
+                    if (self.walkable(nx, ny) || is_target(nx, ny)) && !seen[i] {
                         seen[i] = true;
                         queue.push_back((nx, ny, first, dist + 1));
                     }
@@ -1139,6 +1250,12 @@ impl Field {
                 None
             },
             radar: self.radar_text(),
+            keys: c.keys.clone(),
+            card_dir: self.first_step((c.x, c.y), |x, y| self.card_at(x, y).is_some()).map(|(d, _)| d),
+            door_dir: self.first_step((c.x, c.y), |x, y| {
+                self.door_at(x, y).map_or(false, |dr| !dr.open && c.keys.contains(&dr.hue))
+            })
+            .map(|(d, _)| d),
             size: (self.w, self.h),
             sight: self.sight,
             grid: (0..self.h).flat_map(|gy| (0..self.w).map(move |gx| (gx, gy))).map(|(gx, gy)| self.tile_at(gx, gy)).collect(),
@@ -1189,6 +1306,20 @@ impl Field {
                     let (dx, dy) = d.delta();
                     let (nx, ny) = (x + dx, y + dy);
                     self.bots[i].facing = d;
+                    // 잠긴 문: 같은 색 키카드가 있으면 연다.
+                    let closed_door = self.door_at(nx, ny).filter(|dr| !dr.open).map(|dr| (dr.hue, dr.x, dr.y));
+                    if let Some((hue, dx0, dy0)) = closed_door {
+                        if self.bots[i].keys.contains(&hue) {
+                            for dr in self.doors.iter_mut() {
+                                if dr.x == dx0 && dr.y == dy0 {
+                                    dr.open = true;
+                                }
+                            }
+                            self.events.push((i, format!("{} 키카드로 문을 열었어요!", hue.ko())));
+                        } else {
+                            self.events.push((i, format!("잠겨 있어요. {} 키카드가 필요해요.", hue.ko())));
+                        }
+                    }
                     let deep = self.ground_at(nx, ny) == Ground::Void
                         || (self.ground_at(nx, ny) == Ground::Duct && self.vented());
                     if !self.walkable(nx, ny) || deep {
@@ -1200,6 +1331,11 @@ impl Field {
                         if let Some(f) = self.bots[i].carrying {
                             self.cores[f].x = nx;
                             self.cores[f].y = ny;
+                        }
+                        if let Some(k) = self.cards.iter().position(|c| c.x == nx && c.y == ny) {
+                            let card = self.cards.remove(k);
+                            self.bots[i].keys.push(card.hue);
+                            self.events.push((i, format!("{} 키카드를 주웠어요.", card.hue.ko())));
                         }
                     }
                 }

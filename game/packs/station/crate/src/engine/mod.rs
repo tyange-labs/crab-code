@@ -40,6 +40,7 @@ fn map_json(p: &Field) -> Json {
             Ground::Duct => '~',
             Ground::Reactor => 'N',
             Ground::Slot => 'p',
+            Ground::Door => 'D',
         })
         .collect();
     let mut pressure = Json::object();
@@ -102,6 +103,16 @@ fn frame_json(p: &Field) -> Json {
         };
         j
     });
+    let doors = p.doors.iter().map(|d| {
+        let mut j = Json::object();
+        j.num("x", d.x).num("y", d.y).str("hue", d.hue.code()).bool("open", d.open);
+        j
+    });
+    let cards = p.cards.iter().map(|c| {
+        let mut j = Json::object();
+        j.num("x", c.x).num("y", c.y).str("hue", c.hue.code());
+        j
+    });
     let sentries = p.sentries.iter().map(|g| {
         let mut j = Json::object();
         j.num("x", g.x).num("y", g.y).str("dir", dir_code(g.dir));
@@ -122,6 +133,8 @@ fn frame_json(p: &Field) -> Json {
         .array("cores", cores)
         .array("slots", slots)
         .array("sentries", sentries)
+        .array("doors", doors)
+        .array("cards", cards)
         .array("events", events);
     frame
 }

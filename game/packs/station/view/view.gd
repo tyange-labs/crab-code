@@ -35,7 +35,7 @@ const FARMER_FILES := ["bot_0", "bot_1", "bot_2", "bot_3"]
 const ACTOR := 24 # 로봇·경비 드론 그림 한 프레임의 픽셀 수
 const DIR_VEC := {"N": Vector2(0, -1), "E": Vector2(1, 0), "S": Vector2(0, 1), "W": Vector2(-1, 0)}
 # tiles.png 안의 순서
-enum Tile { GRASS0, GRASS1, DECK0, DECK1, DUCT0, DUCT1, WALL0, WALL1, VOID0, VOID1, VENT0, VENT1, REACTOR, SLOT }
+enum Tile { GRASS0, GRASS1, DECK0, DECK1, DUCT0, DUCT1, WALL0, WALL1, VOID0, VOID1, VENT0, VENT1, REACTOR, SLOT, DOOR_RED, DOOR_BLUE, CARD_RED, CARD_BLUE }
 # Kenney 1-Bit Pack 안의 아이콘 (열, 줄)
 const ICON_BUBBLES := Vector2i(35, 11)
 const ICON_SPARKLE := Vector2i(36, 11)
@@ -318,6 +318,16 @@ func _draw() -> void:
 					_draw_tile(cell, Tile.SLOT)
 				_:
 					_draw_tile(cell, Tile.DECK0 + h % 2)
+
+	# 키카드와 잠긴 문 (20레벨부터)
+	if a.has("doors"):
+		for door in (a.doors if f < 0.5 else b.doors):
+			if not door.open:
+				_draw_tile(Vector2(door.x, door.y), Tile.DOOR_RED if door.hue == "red" else Tile.DOOR_BLUE)
+		for card in (a.cards if f < 0.5 else b.cards):
+			var bob_c := -1.0 if int(_clock * 2.0) % 2 == 1 else 0.0
+			var dst_c := Rect2(_screen(Vector2(card.x, card.y) * T + Vector2(0, bob_c)), Vector2(T, T) * _scale)
+			draw_texture_rect_region(_tiles, dst_c, Rect2((Tile.CARD_RED if card.hue == "red" else Tile.CARD_BLUE) * T, 0, T, T))
 
 	# 슬롯에서 부팅되는 코어 (모듈 → 부팅 중 → 완성)
 	if a.has("slots"):
