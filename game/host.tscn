@@ -80,6 +80,15 @@ layout_mode = 2
 size_flags_vertical = 4
 tooltip_text = "깬 레벨 / 전체"
 
+[node name="Settings" type="Button" parent="Margin/Root/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+tooltip_text = "설정 (IDE·작업 폴더·커밋 이름·소리)"
+theme_type_variation = &"OutlineButton"
+text = "설정"
+
 [node name="Sound" type="Button" parent="Margin/Root/Header"]
 unique_name_in_owner = true
 layout_mode = 2

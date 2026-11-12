@@ -38,6 +38,14 @@ const NARROW_WIDTH := 1000.0
 var narrow := false
 var _narrow_tab := "lesson"
 var _ui_scale := 1.0
+## 어떤 IDE 로 열지: auto(VS Code) | vscode | cursor | zed | rustrover | system
+var ide_choice := "auto"
+const IDES := [
+	["auto", "자동 (VS Code)"], ["vscode", "VS Code"], ["cursor", "Cursor"], ["zed", "Zed"],
+	["rustrover", "RustRover"], ["system", "운영체제 기본 프로그램"],
+]
+var _success: PanelContainer
+var _settings: PopupPanel
 var show_solution := false
 var confirm_solution := false
 
@@ -75,6 +83,8 @@ func _ready() -> void:
 	var settings := _load_settings()
 	if root == "":
 		root = settings.get("workspace", core.default_workspace())
+	ide_choice = settings.get("ide", "auto")
+	Sfx.enabled = settings.get("sound", true)
 	git_name = OS.get_environment("CRAB_GIT_NAME")
 	git_email = OS.get_environment("CRAB_GIT_EMAIL")
 	if git_name == "" and git_email == "":
@@ -102,6 +112,9 @@ func _ready() -> void:
 		_reset_level())
 	%ResetCancel.pressed.connect(func(): %ResetCard.visible = false)
 	%Sound.pressed.connect(_toggle_sound)
+	%Sound.text = "소리" if Sfx.enabled else "음소거"
+	%Settings.pressed.connect(_open_settings)
+	_build_success_card()
 	%StatusAction.pressed.connect(_on_status_action)
 	%TabOutput.pressed.connect(func(): _show_tab("output"))
 	%TabProblems.pressed.connect(func(): _show_tab("problems"))
@@ -376,6 +389,8 @@ func _save_settings() -> void:
 	settings.workspace = root
 	settings.git_name = git_name
 	settings.git_email = git_email
+	settings.ide = ide_choice
+	settings.sound = Sfx.enabled
 	if not pack.is_empty():
 		settings.pack = pack.id
 		settings.level = lesson().get("id", "")
@@ -507,6 +522,8 @@ func _select_pack(index: int, start_level: int) -> void:
 	view = load("res://packs/%s/view/view.gd" % pack.id).new()
 	view.set_anchors_preset(Control.PRESET_FULL_RECT)
 	%ViewHost.add_child(view)
+	if _success:
+		%ViewHost.move_child(_success, -1)
 	view.agent_selected.connect(func(_i): _render_inspector())
 
 	progress = JsonUtil.parse(core.progress(root)).get(pack.id, {})
@@ -526,6 +543,8 @@ func _select_pack(index: int, start_level: int) -> void:
 
 
 func select_level(index: int) -> void:
+	if _success:
+		_success.visible = false
 	level = clampi(index, 0, pack.levels.size() - 1)
 	show_solution = false
 	confirm_solution = false
@@ -562,7 +581,11 @@ func _render_lesson() -> void:
 		for c in chapters:
 			if c.from - 1 == n:
 				%LevelPicker.add_separator(c.name)
-		%LevelPicker.add_item(("✓ " if cleared_of.call(n) else "") + "%d. %s" % [n + 1, pack.levels[n].title], n)
+		var label := ("✓ " if cleared_of.call(n) else "") + "%d. %s" % [n + 1, pack.levels[n].title]
+		var rec: Dictionary = progress.get(pack.levels[n].id, {}).get("best", {})
+		if not rec.is_empty():
+			label += "   %d%s" % [rec.ticks, pack.get("tick", "틱")]
+		%LevelPicker.add_item(label, n)
 	%LevelPicker.select(%LevelPicker.get_item_index(level))
 
 	# 레벨 칩: 지금 장(장이 없으면 전부)
@@ -699,22 +722,47 @@ func _on_status_action() -> void:
 
 ## IDE 로 작업 폴더와 파일을 연다. at 이 있으면 그 줄로 ({file, line, col}).
 ## CRAB_IDE 로 명령을 바꿀 수 있다 (기본: VS Code 의 code).
+## IDE 로 작업 폴더와 파일을 연다. at 이 있으면 그 줄로 ({file, line, col}).
+## 설정의 IDE 를 쓰고, 환경 변수 CRAB_IDE 가 있으면 그 명령을 VS Code 처럼 부른다.
 func _open_ide(at: Dictionary = {}) -> void:
 	var file: String = files.get(lesson().id, "")
-	var target := file
+	var line := 1
+	var col := 1
 	if not at.is_empty():
 		var f: String = at.get("file", "")
-		target = (f if f.is_absolute_path() else root.path_join(pack.id).path_join(f)) + ":%d:%d" % [at.get("line", 1), at.get("col", 1)]
-	var ide := OS.get_environment("CRAB_IDE")
-	var candidates: Array = [ide] if ide != "" else ["code", "/usr/local/bin/code", "/opt/homebrew/bin/code",
-		"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"]
-	for cmd in candidates:
-		if cmd != "" and OS.execute(cmd, [root, "-g", target]) == 0:
+		file = f if f.is_absolute_path() else root.path_join(pack.id).path_join(f)
+		line = at.get("line", 1)
+		col = at.get("col", 1)
+	var env := OS.get_environment("CRAB_IDE")
+	var choice := "custom" if env != "" else ide_choice
+	if choice == "system":
+		OS.shell_open(file)
+		_flash("기본 프로그램으로 열었어요.")
+		return
+	var target := "%s:%d:%d" % [file, line, col]
+	var tries: Array = [] # [명령, 인자]
+	match choice:
+		"custom":
+			tries = [[env, [root, "-g", target]]]
+		"cursor":
+			for c in ["cursor", "/usr/local/bin/cursor", "/Applications/Cursor.app/Contents/Resources/app/bin/cursor"]:
+				tries.append([c, [root, "-g", target]])
+		"zed":
+			for c in ["zed", "/usr/local/bin/zed", "/Applications/Zed.app/Contents/MacOS/cli"]:
+				tries.append([c, [root, target]])
+		"rustrover":
+			for c in ["rustrover", "/usr/local/bin/rustrover", "/Applications/RustRover.app/Contents/MacOS/rustrover"]:
+				tries.append([c, [root, "--line", str(line), "--column", str(col), file]])
+		_:
+			for c in ["code", "/usr/local/bin/code", "/opt/homebrew/bin/code", "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"]:
+				tries.append([c, [root, "-g", target]])
+	for t in tries:
+		if OS.execute(t[0], t[1]) == 0:
 			_flash("IDE 에서 열었어요. 고치고 저장하면 바로 실행돼요.")
 			return
 	# IDE 명령을 못 찾으면 운영체제가 정한 프로그램으로 파일을 연다.
 	OS.shell_open(file)
-	_flash("VS Code 명령(code)을 못 찾아 기본 프로그램으로 열었어요. CRAB_IDE 로 IDE 명령을 정할 수 있어요.")
+	_flash("고른 IDE 의 명령을 못 찾아 기본 프로그램으로 열었어요. 설정에서 IDE 를 바꿀 수 있어요.")
 
 
 # ── 실행 ─────────────────────────────────────────────────────────
@@ -730,6 +778,8 @@ func run(play: bool) -> void:
 		return
 	autoplay = play
 	playing = false
+	if _success:
+		_success.visible = false
 	_build_started = Time.get_ticks_msec()
 	_set_phase("building")
 	if play:
@@ -866,6 +916,7 @@ func _finish_run() -> void:
 	if commit is Dictionary and commit.get("ok", false) and commit.get("hash", "") != "":
 		detail += ("" if detail == "" else " · ") + "git %s 에 커밋" % commit.hash
 	phase = "won"
+	_show_success(stats, rec)
 	var last: bool = level + 1 >= pack.levels.size()
 	_status("won", "성공! %d%s · 코드 %d줄" % [stats.get("ticks", 0), unit, stats.get("lines", 0)], detail, "" if last else "next")
 	_render_lesson()
@@ -941,6 +992,7 @@ func _reset_level() -> void:
 
 func _toggle_sound() -> void:
 	Sfx.enabled = not Sfx.enabled
+	_save_settings()
 	%Sound.text = "소리" if Sfx.enabled else "음소거"
 
 
@@ -949,6 +1001,8 @@ func _toggle_sound() -> void:
 func _toggle_play() -> void:
 	if result.is_empty():
 		return
+	if _success:
+		_success.visible = false
 	if not playing and view.time >= view.last_tick():
 		view.time = 0.0
 		_shown_tick = -1
@@ -1198,3 +1252,218 @@ class TimelineMarks extends Control:
 		if outcome != "":
 			var c := Palette.GREEN if outcome == "won" else Palette.RED
 			draw_rect(Rect2(round(_x(last)) - 1.0, h * 0.5 - 9.0, 3.0, 18.0), c)
+
+
+# ── 성공 카드 ────────────────────────────────────────────────────
+
+func _build_success_card() -> void:
+	_success = PanelContainer.new()
+	_success.visible = false
+	_success.set_anchors_preset(Control.PRESET_CENTER)
+	_success.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_success.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var sb := UiTheme.box(Color(Palette.PANEL, 0.97), 8, 24, 18)
+	sb.border_color = Palette.GREEN
+	sb.set_border_width_all(2)
+	sb.shadow_color = Color(0, 0, 0, 0.4)
+	sb.shadow_size = 12
+	_success.add_theme_stylebox_override("panel", sb)
+	%ViewHost.add_child(_success)
+
+
+func _stat_box(title: String, value: String, note: String) -> Control:
+	var box := PanelContainer.new()
+	box.add_theme_stylebox_override("panel", UiTheme.box(Palette.EDITOR, 8, 14, 10))
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 2)
+	for item in [[title, Palette.pixel_font(), Palette.PIXEL_SIZE, Palette.TEXT3], [value, Palette.pixel_font(true), Palette.PIXEL_SIZE * 2, Palette.TEXT], [note, Palette.text_font(), Palette.SIZE_SMALL, Palette.GREEN]]:
+		if item[0] == "":
+			continue
+		var l := Label.new()
+		l.text = item[0]
+		l.add_theme_font_override("font", item[1])
+		l.add_theme_font_size_override("font_size", item[2])
+		l.add_theme_color_override("font_color", item[3])
+		col.add_child(l)
+	box.add_child(col)
+	return box
+
+
+## 성공하면 세계 위에 겹쳐 보여 준다: 기록, 이전 최고 기록, git 커밋과 태그, 다음 레벨.
+func _show_success(stats: Dictionary, rec: Dictionary) -> void:
+	for c in _success.get_children():
+		c.queue_free()
+	var unit: String = pack.get("tick", "틱")
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	col.custom_minimum_size = Vector2(300, 0)
+	var title := Label.new()
+	title.text = "성공!"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_override("font", Palette.pixel_font(true))
+	title.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE * 2)
+	title.add_theme_color_override("font_color", Palette.GREEN)
+	col.add_child(title)
+	var sub := Label.new()
+	sub.text = "%d. %s" % [level + 1, lesson().title]
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_color_override("font_color", Palette.TEXT2)
+	sub.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+	col.add_child(sub)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var tick_note := ""
+	var prev = rec.get("previous")
+	if rec.get("better", false) and prev is Dictionary:
+		tick_note = "최고 기록 경신 · 전 %d" % prev.ticks
+	elif not rec.get("better", false):
+		var best: Dictionary = progress.get(lesson().id, {}).get("best", {})
+		tick_note = "최고 %d%s" % [best.get("ticks", 0), unit]
+	row.add_child(_stat_box(unit, str(stats.get("ticks", 0)), tick_note))
+	row.add_child(_stat_box("코드", "%d줄" % stats.get("lines", 0), ""))
+	col.add_child(row)
+	var commit = rec.get("commit")
+	if commit is Dictionary and commit.get("ok", false) and commit.get("hash", "") != "":
+		var git := Label.new()
+		git.text = "git %s%s" % [commit.hash, ("  ·  best/%s/%s" % [pack.id, lesson().id]) if rec.get("better", false) else ""]
+		git.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		git.add_theme_font_override("font", Palette.code_font())
+		git.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+		git.add_theme_color_override("font_color", Palette.TEXT3)
+		col.add_child(git)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 8)
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	if level + 1 < pack.levels.size():
+		var next := Button.new()
+		next.text = "다음 레벨 ↵"
+		next.theme_type_variation = "PrimaryButton"
+		next.focus_mode = Control.FOCUS_NONE
+		next.pressed.connect(func(): select_level(level + 1))
+		buttons.add_child(next)
+	var again := Button.new()
+	again.text = "다시 보기"
+	again.theme_type_variation = "OutlineButton"
+	again.focus_mode = Control.FOCUS_NONE
+	again.pressed.connect(func():
+		_success.visible = false
+		_jump_to(0.0)
+		_toggle_play())
+	buttons.add_child(again)
+	col.add_child(buttons)
+	_success.add_child(col)
+	_success.visible = true
+	%ViewHost.move_child(_success, -1)
+	_success.reset_size()
+	_success.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+
+
+# ── 설정 ─────────────────────────────────────────────────────────
+
+func _open_settings() -> void:
+	if _settings:
+		_settings.queue_free()
+	_settings = PopupPanel.new()
+	var sb := UiTheme.box(Palette.PANEL, 8, 20, 16)
+	sb.border_color = Palette.BORDER
+	sb.set_border_width_all(2)
+	_settings.add_theme_stylebox_override("panel", sb)
+	var col := VBoxContainer.new()
+	col.custom_minimum_size = Vector2(440, 0)
+	col.add_theme_constant_override("separation", 10)
+	_settings.add_child(col)
+	var title := Label.new()
+	title.text = "설정"
+	title.theme_type_variation = "PixelTitle"
+	col.add_child(title)
+
+	var ide := OptionButton.new()
+	for i in IDES.size():
+		ide.add_item(IDES[i][1], i)
+		if IDES[i][0] == ide_choice:
+			ide.select(i)
+	ide.item_selected.connect(func(i: int):
+		ide_choice = IDES[i][0]
+		_save_settings())
+	_settings_row(col, "IDE", ide)
+	if OS.get_environment("CRAB_IDE") != "":
+		_settings_note(col, "환경 변수 CRAB_IDE (%s) 가 있어서 그 명령을 먼저 써요." % OS.get_environment("CRAB_IDE"))
+
+	var folder := LineEdit.new()
+	folder.text = root
+	_settings_row(col, "작업 폴더", folder)
+	var name_edit := LineEdit.new()
+	name_edit.text = git_name
+	_settings_row(col, "커밋 이름", name_edit)
+	var email_edit := LineEdit.new()
+	email_edit.text = git_email
+	_settings_row(col, "커밋 이메일", email_edit)
+	_settings_note(col, "이름·이메일은 작업 폴더의 커밋에만 쓰여요. 작업 폴더를 바꾸면 그 폴더에 새로 만들거나 이어서 써요.")
+
+	var sound := CheckButton.new()
+	sound.text = "효과음"
+	sound.button_pressed = Sfx.enabled
+	sound.toggled.connect(func(on: bool):
+		Sfx.enabled = on
+		%Sound.text = "소리" if on else "음소거"
+		_save_settings())
+	col.add_child(sound)
+
+	var error := Label.new()
+	error.add_theme_color_override("font_color", Palette.RED)
+	error.visible = false
+	col.add_child(error)
+	var apply := Button.new()
+	apply.text = "적용"
+	apply.theme_type_variation = "PrimaryButton"
+	apply.pressed.connect(func():
+		var p := folder.text.strip_edges()
+		if p.begins_with("~"):
+			p = OS.get_environment("HOME") + p.substr(1)
+		var n := name_edit.text.strip_edges()
+		var e := email_edit.text.strip_edges()
+		if p == "" or n == "" or not e.contains("@"):
+			error.text = "작업 폴더, 이름, 이메일(@ 포함)을 모두 적어 주세요."
+			error.visible = true
+			return
+		var changed := p != root or n != git_name or e != git_email
+		root = p
+		git_name = n
+		git_email = e
+		_save_settings()
+		_settings.hide()
+		if changed and not pack.is_empty():
+			_select_pack(packs.find(pack), level))
+	col.add_child(apply)
+	add_child(_settings)
+	_settings.size = Vector2i.ZERO # 내용 크기에 맞춘다
+	_settings.popup_centered()
+
+
+func _settings_row(col: VBoxContainer, label: String, field: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var l := Label.new()
+	l.text = label
+	l.custom_minimum_size = Vector2(96, 0)
+	l.add_theme_color_override("font_color", Palette.TEXT2)
+	l.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+	row.add_child(l)
+	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if field is LineEdit:
+		field.add_theme_font_override("font", Palette.code_font())
+		field.add_theme_font_size_override("font_size", Palette.SIZE_CODE)
+		field.add_theme_stylebox_override("normal", UiTheme.box(Palette.EDITOR, 6, 10, 4))
+	row.add_child(field)
+	col.add_child(row)
+
+
+func _settings_note(col: VBoxContainer, text: String) -> void:
+	var l := Label.new()
+	l.text = text
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(440, 0) # 폭을 정해 둬야 줄바꿈 높이가 제대로 나온다
+	l.add_theme_color_override("font_color", Palette.TEXT3)
+	l.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+	col.add_child(l)
