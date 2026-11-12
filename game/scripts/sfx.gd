@@ -3,26 +3,34 @@ extends Node
 
 const RATE := 22050
 
-var enabled := true
+## 소리는 기본으로 꺼져 있다 (설정이나 윗줄 버튼으로 켠다).
+var enabled := false
 var _sounds := {}
 var _players: Array[AudioStreamPlayer] = []
 
 
 func _ready() -> void:
-	# [주파수 시작, 끝, 길이(초), 파형, 음량]
-	_sounds.step = _tone([[520.0, 440.0, 0.05, "square", 0.10]])
-	_sounds.turn = _tone([[380.0, 460.0, 0.05, "square", 0.08]])
-	_sounds.collect = _tone([[880.0, 880.0, 0.06, "square", 0.14], [1320.0, 1320.0, 0.10, "square", 0.14]])
-	_sounds.deposit = _tone([[660.0, 660.0, 0.06, "triangle", 0.25], [990.0, 990.0, 0.12, "triangle", 0.25]])
-	_sounds.polish = _tone([[1200.0, 2400.0, 0.14, "sine", 0.18]])
-	_sounds.unlock = _tone([[440.0, 440.0, 0.06, "square", 0.12], [660.0, 660.0, 0.06, "square", 0.12], [880.0, 880.0, 0.12, "square", 0.12]])
-	_sounds.bump = _tone([[140.0, 60.0, 0.18, "noise", 0.30]])
-	_sounds.fail = _tone([[330.0, 330.0, 0.12, "triangle", 0.25], [247.0, 247.0, 0.12, "triangle", 0.25], [196.0, 160.0, 0.25, "triangle", 0.25]])
+	# [주파수 시작, 끝, 길이(초), 파형, 음량]  — 어두운 SF: 전자음·비프·알람
+	_sounds.step = _tone([[420.0, 380.0, 0.04, "triangle", 0.08]])
+	_sounds.turn = _tone([[300.0, 360.0, 0.04, "triangle", 0.07]])
+	_sounds.grab = _tone([[700.0, 1100.0, 0.05, "sine", 0.16], [1400.0, 1400.0, 0.07, "sine", 0.14]])
+	_sounds.insert = _tone([[180.0, 360.0, 0.10, "saw", 0.12], [880.0, 1320.0, 0.14, "sine", 0.20]])
+	_sounds.install = _tone([[1500.0, 1500.0, 0.03, "square", 0.08], [900.0, 900.0, 0.05, "square", 0.08]])
+	_sounds.charge = _tone([[300.0, 1500.0, 0.22, "saw", 0.10]])
+	_sounds.boot = _tone([[660.0, 660.0, 0.05, "sine", 0.18], [990.0, 990.0, 0.05, "sine", 0.18], [1320.0, 1320.0, 0.12, "sine", 0.18]])
+	_sounds.bump = _tone([[110.0, 60.0, 0.16, "noise", 0.28]])
+	_sounds.alarm = _tone([[880.0, 880.0, 0.09, "square", 0.14], [660.0, 660.0, 0.09, "square", 0.14], [880.0, 880.0, 0.09, "square", 0.14], [660.0, 560.0, 0.16, "square", 0.14]])
 	_sounds.win = _tone([
-		[523.0, 523.0, 0.09, "square", 0.12], [659.0, 659.0, 0.09, "square", 0.12],
-		[784.0, 784.0, 0.09, "square", 0.12], [1047.0, 1047.0, 0.28, "square", 0.12],
+		[440.0, 440.0, 0.08, "sine", 0.18], [554.0, 554.0, 0.08, "sine", 0.18],
+		[659.0, 659.0, 0.08, "sine", 0.18], [880.0, 880.0, 0.30, "sine", 0.20],
 	])
-	_sounds.compile = _tone([[300.0, 600.0, 0.08, "sine", 0.12]])
+	_sounds.fail = _tone([[400.0, 300.0, 0.14, "saw", 0.12], [300.0, 180.0, 0.28, "saw", 0.12]])
+	_sounds.compile = _tone([[500.0, 800.0, 0.06, "sine", 0.10]])
+	# 예전 이름도 남겨 둔다 (다른 팩이 쓸 수 있다).
+	_sounds.collect = _sounds.grab
+	_sounds.deposit = _sounds.insert
+	_sounds.polish = _sounds.boot
+	_sounds.unlock = _sounds.boot
 	for i in 6:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -54,6 +62,7 @@ func _tone(parts: Array) -> AudioStreamWAV:
 				"square": v = 1.0 if fmod(phase, 1.0) < 0.5 else -1.0
 				"triangle": v = 4.0 * absf(fmod(phase, 1.0) - 0.5) - 1.0
 				"sine": v = sin(phase * TAU)
+				"saw": v = 2.0 * fmod(phase, 1.0) - 1.0
 				"noise": v = randf_range(-1.0, 1.0) * 0.6 + sin(phase * TAU) * 0.4
 			# 시작과 끝을 부드럽게 해서 딸깍 소리를 없앤다.
 			var env := minf(1.0, t * 40.0) * pow(1.0 - t, 1.5)

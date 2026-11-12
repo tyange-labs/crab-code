@@ -84,7 +84,7 @@ func _ready() -> void:
 	if root == "":
 		root = settings.get("workspace", core.default_workspace())
 	ide_choice = settings.get("ide", "auto")
-	Sfx.enabled = settings.get("sound", true)
+	Sfx.enabled = settings.get("sound", false)
 	git_name = OS.get_environment("CRAB_GIT_NAME")
 	git_email = OS.get_environment("CRAB_GIT_EMAIL")
 	if git_name == "" and git_email == "":

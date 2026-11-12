@@ -132,22 +132,22 @@ func play_effects(tick: int) -> void:
 			"swept":
 				_exp_float(Vector2(was.x, was.y), "exp_stress")
 				_burst(Vector2(was.x, was.y), Color("#6ca8d8"), 14)
-				Sfx.play("bump", 0.7)
+				Sfx.play("alarm", 0.8)
 			"caught":
 				_exp_float(Vector2(was.x, was.y), "exp_alert")
-				Sfx.play("fail", 1.4)
+				Sfx.play("alarm", 1.2)
 			"bump":
 				_exp_float(at, "exp_confused")
 				Sfx.play("bump", 1.3)
 		if not prev.is_empty() and c.carrying and not was.carrying:
 			_exp_float(at, "exp_love")
 			_burst(at, Color("#ffd96b"), 8)
-			Sfx.play("collect", 1.0 + i * 0.08)
+			Sfx.play("grab", 1.0 + i * 0.08)
 	if not prev.is_empty() and f.delivered > prev.delivered:
 		var reactor := Vector2(map.reactor[0], map.reactor[1])
 		_exp_float(reactor, "exp_love")
 		_burst(reactor, Palette.ACCENT, 18)
-		Sfx.play("deposit")
+		Sfx.play("insert")
 	# 슬롯: 심기·물 주기·코어가 열리는 순간
 	if not prev.is_empty() and f.has("slots") and prev.has("slots"):
 		for k in f.slots.size():
@@ -158,14 +158,14 @@ func play_effects(tick: int) -> void:
 				if now.stage == "seed":
 					_exp_float(cell, "exp_working")
 					_burst(cell, Color("#8a5a35"), 8)
-					Sfx.play("collect", 0.7)
+					Sfx.play("install")
 				elif now.stage == "booting" and was_p.stage == "seed":
 					_exp_float(cell, "exp_working")
 					_burst(cell, Color("#6cc4ff"), 14)
-					Sfx.play("bump", 1.8)
+					Sfx.play("charge")
 				elif now.stage == "empty" and was_p.stage == "booting":
 					_burst(cell, Color("#ffe27a"), 16)
-					Sfx.play("deposit", 1.4)
+					Sfx.play("boot")
 
 
 ## 칸 위로 떠오르며 사라지는 말풍선 (Sunnyside 의 expression 아이콘).
