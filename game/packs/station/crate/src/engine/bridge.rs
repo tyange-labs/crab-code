@@ -1234,3 +1234,82 @@ impl From<w::Hue> for crate::level20::Hue {
         }
     }
 }
+
+// ── level21 ──
+impl From<crate::level21::Action> for w::Action {
+    fn from(a: crate::level21::Action) -> w::Action {
+        match a {
+            crate::level21::Action::Wait => w::Action::Wait,
+            crate::level21::Action::Move(d) => w::Action::Move(d.into()),
+            crate::level21::Action::Grab => w::Action::Grab,
+            crate::level21::Action::Insert => w::Action::Insert,
+            crate::level21::Action::Install => w::Action::Install,
+            crate::level21::Action::Charge => w::Action::Charge,
+        }
+    }
+}
+impl From<crate::level21::Dir> for w::Dir {
+    fn from(d: crate::level21::Dir) -> w::Dir {
+        match d {
+            crate::level21::Dir::North => w::Dir::North,
+            crate::level21::Dir::East => w::Dir::East,
+            crate::level21::Dir::South => w::Dir::South,
+            crate::level21::Dir::West => w::Dir::West,
+        }
+    }
+}
+impl From<w::Dir> for crate::level21::Dir {
+    fn from(d: w::Dir) -> crate::level21::Dir {
+        match d {
+            w::Dir::North => crate::level21::Dir::North,
+            w::Dir::East => crate::level21::Dir::East,
+            w::Dir::South => crate::level21::Dir::South,
+            w::Dir::West => crate::level21::Dir::West,
+        }
+    }
+}
+impl From<w::Tile> for crate::level21::Tile {
+    fn from(t: w::Tile) -> crate::level21::Tile {
+        match t {
+            w::Tile::Deck => crate::level21::Tile::Deck,
+            w::Tile::Core => crate::level21::Tile::Core,
+            w::Tile::Reactor => crate::level21::Tile::Reactor,
+            w::Tile::Wall => crate::level21::Tile::Wall,
+            w::Tile::Door(h) => crate::level21::Tile::Door(h.into()),
+            w::Tile::Card(h) => crate::level21::Tile::Card(h.into()),
+            w::Tile::Duct => crate::level21::Tile::Duct,
+            w::Tile::Void => crate::level21::Tile::Void,
+            w::Tile::Sentry => crate::level21::Tile::Sentry,
+            w::Tile::Slot => crate::level21::Tile::Slot,
+            w::Tile::Module => crate::level21::Tile::Module,
+            w::Tile::Booting => crate::level21::Tile::Booting,
+        }
+    }
+}
+impl From<w::Pressure> for crate::level21::Pressure {
+    fn from(t: w::Pressure) -> crate::level21::Pressure {
+        match t {
+            w::Pressure::Safe { turns_left } => crate::level21::Pressure::Safe { turns_left },
+            w::Pressure::Vacuum { turns_left } => crate::level21::Pressure::Vacuum { turns_left },
+            w::Pressure::Stable => crate::level21::Pressure::Stable,
+        }
+    }
+}
+
+impl From<w::Sight> for crate::level21::SightError {
+    fn from(e: w::Sight) -> crate::level21::SightError {
+        match e {
+            w::Sight::OffMap => crate::level21::SightError::OffMap,
+            w::Sight::TooFar => crate::level21::SightError::TooFar,
+        }
+    }
+}
+
+impl From<w::Hue> for crate::level21::Hue {
+    fn from(h: w::Hue) -> crate::level21::Hue {
+        match h {
+            w::Hue::Red => crate::level21::Hue::Red,
+            w::Hue::Blue => crate::level21::Hue::Blue,
+        }
+    }
+}

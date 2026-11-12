@@ -1,0 +1,1 @@
+`from_str` 안에서 `'N' | 'E' | 'S' | 'W'` 일 때 `code` 로 `Dir` 를 고르고 `Ok(Command::Go(dir, steps))` 를 돌려주세요. 처음 틱에 `view.briefing().split(' ')` 의 조각마다 `token.parse::<Command>()` 를 하고, `Ok` 면 `VecDeque<Action>` 에 `Move(dir)` 을 `steps` 번, `Grab`, `Insert` 를 넣어요. `Err` 면 `println!`. 그다음은 틱마다 `pop_front()` 해서 돌려줘요.

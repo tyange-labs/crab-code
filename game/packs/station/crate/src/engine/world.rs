@@ -301,6 +301,7 @@ pub struct View {
     slot_dir: Option<Dir>,
     ripe: Vec<(i32, i32)>,
     radar: String,
+    briefing: String,
     keys: Vec<Hue>,
     card_dir: Option<Dir>,
     door_dir: Option<Dir>,
@@ -356,6 +357,11 @@ impl View {
     /// 반응로로 가는 첫걸음. 이미 반응로 위라면 None.
     pub fn reactor_dir(&self) -> Option<Dir> {
         self.reactor_dir
+    }
+
+    /// 작전 지시문. 레벨마다 정해진 글이다.
+    pub fn briefing(&self) -> &str {
+        &self.briefing
     }
 
     /// 가진 키카드 목록.
@@ -457,6 +463,8 @@ pub struct Spec {
     slot_sense: bool,
     /// tile_at 으로 볼 수 있는 거리 (걸음 수).
     sight: i32,
+    /// 작전 지시문 (없으면 빈 글).
+    briefing: &'static str,
 }
 
 // 지도 기호
@@ -479,6 +487,7 @@ pub const SPECS: &[Spec] = &[
         reach: true,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "carry",
@@ -493,6 +502,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "smell",
@@ -515,6 +525,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "maze",
@@ -537,6 +548,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "vacuum",
@@ -557,6 +569,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "swarm",
@@ -581,6 +594,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "install",
@@ -602,6 +616,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "salvage",
@@ -625,6 +640,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "hub",
@@ -648,6 +664,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "sentries",
@@ -671,6 +688,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "chores",
@@ -694,6 +712,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "scout",
@@ -717,6 +736,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: false,
         sight: 7,
+        briefing: "",
     },
     Spec {
         id: "fog",
@@ -742,6 +762,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: false,
         sight: 3,
+        briefing: "",
     },
     Spec {
         id: "relay",
@@ -765,6 +786,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 30,
+        briefing: "",
     },
     Spec {
         id: "radar",
@@ -788,6 +810,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 30,
+        briefing: "",
     },
     Spec {
         id: "ledger",
@@ -813,6 +836,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: false,
         sight: 3,
+        briefing: "",
     },
     Spec {
         id: "route",
@@ -839,6 +863,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 40,
+        briefing: "",
     },
     Spec {
         id: "generic",
@@ -862,6 +887,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 30,
+        briefing: "",
     },
     Spec {
         id: "sweep",
@@ -886,6 +912,7 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 3,
+        briefing: "",
     },
     Spec {
         id: "vault",
@@ -908,6 +935,30 @@ pub const SPECS: &[Spec] = &[
         reach: false,
         slot_sense: true,
         sight: 40,
+        briefing: "",
+    },
+    Spec {
+        id: "briefing",
+        map: &[
+            "###########",
+            "#N........#",
+            "#.........#",
+            "#...f.....#",
+            "#.........#",
+            "#........f#",
+            "###########",
+        ],
+        bots: 1,
+        goal: 2,
+        max_ticks: 60,
+        smell: u32::MAX,
+        pressure: None,
+        random_core: 0,
+        respawn: false,
+        reach: false,
+        slot_sense: true,
+        sight: 40,
+        briefing: "E3 S2 G W3 N2 I Q7 E8 S4 G W8 N4 E? I",
     },
 ];
 
@@ -935,6 +986,7 @@ pub struct Field {
     pub reach: bool,
     pub slot_sense: bool,
     pub sight: i32,
+    pub briefing: &'static str,
     pub spots: Vec<(i32, i32)>,
     rng: u64,
     /// 지난 틱에 일어난 일: (로봇 번호, 설명)
@@ -974,6 +1026,7 @@ pub fn build(level: usize, seed: u64) -> Field {
         reach: spec.reach,
         slot_sense: spec.slot_sense,
         sight: spec.sight,
+        briefing: spec.briefing,
         spots: Vec::new(),
         rng: seed ^ 0xC0FF_EE15_BEEF,
         events: Vec::new(),
@@ -1250,6 +1303,7 @@ impl Field {
                 None
             },
             radar: self.radar_text(),
+            briefing: self.briefing.to_string(),
             keys: c.keys.clone(),
             card_dir: self.first_step((c.x, c.y), |x, y| self.card_at(x, y).is_some()).map(|(d, _)| d),
             door_dir: self.first_step((c.x, c.y), |x, y| {
