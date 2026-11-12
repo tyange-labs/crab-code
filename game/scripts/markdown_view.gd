@@ -404,12 +404,12 @@ const RUST_TYPES := [
 	"i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "u128", "usize", "f32", "f64",
 	"bool", "char", "str", "String", "Vec", "Option", "Result", "Some", "None", "Ok", "Err", "Box",
 ]
-const COL_KEYWORD := Color("#ff8f5a")
-const COL_TYPE := Color("#6fe0c0")
-const COL_COMMENT := Color("#717791")
-const COL_STRING := Color("#b5e07a")
-const COL_NUMBER := Color("#d9a8ff")
-const COL_FUNC := Color("#8ec5ff")
+const COL_KEYWORD := Palette.SYN_KEYWORD
+const COL_TYPE := Palette.SYN_TYPE
+const COL_COMMENT := Palette.SYN_COMMENT
+const COL_STRING := Palette.SYN_STRING
+const COL_NUMBER := Palette.SYN_NUMBER
+const COL_FUNC := Palette.SYN_FUNC
 
 
 static func _rust_tokens(text: String) -> Array:
@@ -491,7 +491,7 @@ func _draw() -> void:
 			"code":
 				var rect := Rect2(0, item.y, size.x, item.h)
 				var sb := UiTheme.box(Palette.EDITOR, 8)
-				sb.border_color = Color("#2d3150")
+				sb.border_color = Palette.BORDER
 				sb.set_border_width_all(1)
 				draw_style_box(sb, rect)
 				var hovered: bool = _hover >= 0 and _hits[_hover].kind == "copy" and _hits[_hover].rect == item.copy_rect
@@ -531,8 +531,8 @@ func _draw_para(item: Dictionary) -> void:
 		for b in line.boxes:
 			var obj: Dictionary = para.objects[b.key]
 			var hovered: bool = _hover >= 0 and _hits[_hover].kind == "code" and _hits[_hover].rect == b.rect
-			var sb := UiTheme.box(Color("#3a3f5c") if hovered else Color("#2f3349"), 5)
-			sb.border_color = Color("#454a6b") if hovered else Color("#3a3e58")
+			var sb := UiTheme.box(Palette.CODE_BOX_HOVER if hovered else Palette.CODE_BOX, 5)
+			sb.border_color = Palette.CODE_BOX_LINE_HOVER if hovered else Palette.CODE_BOX_LINE
 			sb.set_border_width_all(1)
 			draw_style_box(sb, b.rect)
 			var cf := Palette.code_font()

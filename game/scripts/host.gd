@@ -708,7 +708,10 @@ func _sync_timeline() -> void:
 
 # ── 출력 창과 행위자 살펴보기 ─────────────────────────────────────
 
-const TONES := {"bad": "#ff6b7a", "warn": "#f2c94c", "good": "#5fd38d", "dim": "#717791", "": "#e4e6f0"}
+var TONES := {
+	"bad": Palette.hex(Palette.RED), "warn": Palette.hex(Palette.WARN), "good": Palette.hex(Palette.GREEN),
+	"dim": Palette.hex(Palette.TEXT3), "": Palette.hex(Palette.TEXT),
+}
 
 
 static func _escape(s: String) -> String:
@@ -737,12 +740,12 @@ func _log_compiler(output: String, warnings_only: bool) -> void:
 
 
 func _agent_hex(i: int) -> String:
-	var colors: Array = pack.get("colors", ["#f4511e"])
+	var colors: Array = pack.get("colors", [Palette.hex(Palette.ACCENT)])
 	return colors[i % colors.size()]
 
 
 func _agent_tag(tick: int, agent: int) -> String:
-	return "[color=#5d627a]t%-3d[/color][color=%s]#%d[/color] " % [tick, _agent_hex(agent), agent]
+	return "[color=%s]t%-3d[/color][color=%s]#%d[/color] " % [Palette.hex(Palette.TEXT3), tick, _agent_hex(agent), agent]
 
 
 ## 지금 틱까지 일어난 출력·사건을 시간 순서로 보여 준다.
@@ -774,7 +777,7 @@ func _render_console(tick: int) -> void:
 
 func _render_inspector() -> void:
 	if result.is_empty() or not view:
-		%InspectorText.text = "[color=#8a8fa8]실행이 끝나면 %s를 눌러 그 틱의 상태와 행동을 볼 수 있어요.[/color]" % pack.get("agent", "행위자")
+		%InspectorText.text = "[color=%s]실행이 끝나면 %s를 눌러 그 틱의 상태와 행동을 볼 수 있어요.[/color]" % [Palette.hex(Palette.TEXT2), pack.get("agent", "행위자")]
 		return
 	var i: int = view.selected
 	var tick := int(floor(view.time + 0.0001))
@@ -782,13 +785,14 @@ func _render_inspector() -> void:
 		return
 	var lines := PackedStringArray()
 	var where: String = view.describe_agent(i, tick)
-	lines.append("[color=%s]%s #%d[/color]  [color=#8a8fa8]%s %d · %s[/color]" % [_agent_hex(i), pack.get("agent", ""), i, pack.get("tick", "틱"), tick, where])
+	var dim := Palette.hex(Palette.TEXT2)
+	lines.append("[color=%s]%s #%d[/color]  [color=%s]%s %d · %s[/color]" % [_agent_hex(i), pack.get("agent", ""), i, dim, pack.get("tick", "틱"), tick, where])
 	var acts: Array = result.actions[tick] if tick < result.actions.size() else []
 	var states: Array = result.states[tick] if tick < result.states.size() else []
 	if i < acts.size() and acts[i] != null:
-		lines.append("[color=#8a8fa8]tick() →[/color] [color=#ffc66d]%s[/color]" % _escape(acts[i]))
+		lines.append("[color=%s]tick() →[/color] [color=%s]%s[/color]" % [dim, Palette.hex(Palette.CODE), _escape(acts[i])])
 	if i < states.size() and states[i] != null:
-		lines.append("[color=#8a8fa8]self   =[/color] [color=#6fe0c0]%s[/color]" % _escape(states[i]))
+		lines.append("[color=%s]self   =[/color] [color=%s]%s[/color]" % [dim, Palette.hex(Palette.SYN_TYPE), _escape(states[i])])
 	elif tick >= view.last_tick():
-		lines.append("[color=#8a8fa8]시뮬레이션 끝[/color]")
+		lines.append("[color=%s]시뮬레이션 끝[/color]" % dim)
 	%InspectorText.text = "\n".join(lines)

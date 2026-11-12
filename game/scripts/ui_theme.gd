@@ -15,6 +15,19 @@ static func box(color: Color, radius := 8, pad_x := 0.0, pad_y := 0.0) -> StyleB
 	return s
 
 
+## 키보드 포커스 링: SKY 2px (버튼 면 위에 겹쳐 그린다).
+static func focus_ring() -> StyleBoxFlat:
+	var s := box(Color(0, 0, 0, 0), 8, 16, 8)
+	s.draw_center = false
+	s.border_color = Palette.SKY
+	s.set_border_width_all(2)
+	s.expand_margin_left = 2
+	s.expand_margin_right = 2
+	s.expand_margin_top = 2
+	s.expand_margin_bottom = 2
+	return s
+
+
 static func _pressable(color: Color) -> StyleBoxFlat:
 	var s := box(color, 8, 16, 8)
 	s.border_width_bottom = 3
@@ -42,7 +55,7 @@ static func build() -> Theme:
 	t.set_stylebox("hover", "Button", _pressable(Palette.PANEL_HI.lightened(0.12)))
 	t.set_stylebox("pressed", "Button", box(Palette.PANEL_HI.darkened(0.15), 8, 16, 8))
 	t.set_stylebox("disabled", "Button", box(Palette.PANEL_HI.darkened(0.2), 8, 16, 8))
-	t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
+	t.set_stylebox("focus", "Button", focus_ring())
 	t.set_color("font_color", "Button", Palette.TEXT)
 	t.set_color("font_hover_color", "Button", Palette.TEXT)
 	t.set_color("font_pressed_color", "Button", Palette.TEXT)
@@ -55,7 +68,31 @@ static func build() -> Theme:
 	t.set_stylebox("hover", "PrimaryButton", _pressable(Palette.ACCENT.lightened(0.12)))
 	t.set_stylebox("pressed", "PrimaryButton", box(Palette.ACCENT.darkened(0.15), 8, 16, 8))
 	t.set_stylebox("disabled", "PrimaryButton", box(Palette.ACCENT.darkened(0.35), 8, 16, 8))
-	t.set_color("font_color", "PrimaryButton", Color.WHITE)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		t.set_color(c, "PrimaryButton", Palette.ON_ACCENT)
+	t.set_color("font_disabled_color", "PrimaryButton", Palette.ON_ACCENT.lightened(0.3))
+
+	# 테두리 버튼 (보조 동작)
+	t.set_type_variation("OutlineButton", "Button")
+	var outline := box(Color(0, 0, 0, 0), 8, 14, 7)
+	outline.border_color = Palette.BORDER
+	outline.set_border_width_all(2)
+	var outline_hover := outline.duplicate()
+	outline_hover.bg_color = Palette.PANEL_HI
+	t.set_stylebox("normal", "OutlineButton", outline)
+	t.set_stylebox("hover", "OutlineButton", outline_hover)
+	t.set_stylebox("pressed", "OutlineButton", outline_hover)
+	t.set_stylebox("disabled", "OutlineButton", outline)
+	t.set_color("font_color", "OutlineButton", Palette.TEXT2)
+	t.set_color("font_hover_color", "OutlineButton", Palette.TEXT)
+
+	# 위험한 동작 (되돌리기 등)
+	t.set_type_variation("DangerButton", "Button")
+	t.set_stylebox("normal", "DangerButton", _pressable(Palette.RED_BG))
+	t.set_stylebox("hover", "DangerButton", _pressable(Palette.RED_BG.lightened(0.1)))
+	t.set_stylebox("pressed", "DangerButton", box(Palette.RED_BG.darkened(0.15), 8, 16, 8))
+	t.set_color("font_color", "DangerButton", Palette.RED)
+	t.set_color("font_hover_color", "DangerButton", Palette.RED)
 
 	# 장·레벨 칩
 	for kind in ["Chip", "ChipCurrent", "ChipDone"]:
@@ -97,6 +134,9 @@ static func build() -> Theme:
 		t.set_stylebox("grabber_pressed", bar, box(Palette.DIM, 4))
 
 	# 툴팁
-	t.set_stylebox("panel", "TooltipPanel", box(Color("#23263b"), 6, 10, 7))
+	var tip := box(Palette.TOOLTIP, 6, 10, 7)
+	tip.border_color = Palette.BORDER
+	tip.set_border_width_all(1)
+	t.set_stylebox("panel", "TooltipPanel", tip)
 	t.set_color("font_color", "TooltipLabel", Palette.TEXT)
 	return t
