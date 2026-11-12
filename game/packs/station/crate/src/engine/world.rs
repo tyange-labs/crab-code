@@ -257,6 +257,7 @@ pub struct View {
     reactor_dir: Option<Dir>,
     slot_dir: Option<Dir>,
     ripe: Vec<(i32, i32)>,
+    radar: String,
     size: (i32, i32),
     sight: i32,
     grid: Vec<Tile>,
@@ -309,6 +310,11 @@ impl View {
     /// 반응로로 가는 첫걸음. 이미 반응로 위라면 None.
     pub fn reactor_dir(&self) -> Option<Dir> {
         self.reactor_dir
+    }
+
+    /// 레이더가 보내는 글. 코어마다 `C:x,y` 를 공백으로 이어 붙이고, 가끔 잡음이 섞인다.
+    pub fn radar(&self) -> &str {
+        &self.radar
     }
 
     /// 지도 크기 (가로, 세로).
@@ -699,6 +705,29 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 30,
     },
+    Spec {
+        id: "radar",
+        map: &[
+            "###############",
+            "#N............#",
+            "#..?.....?....#",
+            "#......?......#",
+            "#?.......?..?.#",
+            "#....?........#",
+            "#.?.......?...#",
+            "###############",
+        ],
+        bots: 1,
+        goal: 6,
+        max_ticks: 160,
+        smell: 0,
+        pressure: None,
+        random_core: 7,
+        respawn: false,
+        reach: false,
+        slot_sense: true,
+        sight: 30,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();
@@ -851,6 +880,23 @@ impl Field {
         self.cores.push(Core { x, y, home: (x, y), state: CoreState::Ground });
     }
 
+    fn radar_text(&self) -> String {
+        let mut tokens: Vec<String> = self
+            .cores
+            .iter()
+            .filter(|f| f.state == CoreState::Ground)
+            .map(|f| format!("C:{},{}", f.x, f.y))
+            .collect();
+        // 잡음: 해독할 수 없는 조각이 가끔 섞인다 (틱으로 정해져서 늘 같다).
+        if self.tick % 4 == 1 {
+            tokens.insert(tokens.len() / 2, "C:?,?".to_string());
+        }
+        if self.tick % 5 == 2 {
+            tokens.insert(0, "###".to_string());
+        }
+        tokens.join(" ")
+    }
+
     fn slot_at(&self, x: i32, y: i32) -> Option<&Slot> {
         self.slots.iter().find(|p| p.x == x && p.y == y)
     }
@@ -994,6 +1040,7 @@ impl Field {
             } else {
                 None
             },
+            radar: self.radar_text(),
             size: (self.w, self.h),
             sight: self.sight,
             grid: (0..self.h).flat_map(|gy| (0..self.w).map(move |gx| (gx, gy))).map(|(gx, gy)| self.tile_at(gx, gy)).collect(),
