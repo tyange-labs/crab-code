@@ -3,18 +3,18 @@
 version = 4
 
 [[package]]
-name = "crab-core"
+name = "crab-godot"
 version = "0.3.0"
 dependencies = [
+ "crab-host",
+ "godot",
  "serde_json",
 ]
 
 [[package]]
-name = "crab-godot"
-version = "0.3.0"
+name = "crab-host"
+version = "0.4.0"
 dependencies = [
- "crab-core",
- "godot",
  "serde_json",
 ]
 

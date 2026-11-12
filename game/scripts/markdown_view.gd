@@ -395,6 +395,23 @@ func _make_code_block(text: String, width: float) -> Dictionary:
 	return {"p": p, "ranges": _rust_tokens(text), "objects": [], "mono": true, "base": Palette.TEXT}
 
 
+const RUST_KEYWORDS := [
+	"as", "break", "const", "continue", "crate", "else", "enum", "extern", "fn", "for", "if", "impl", "in",
+	"let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return", "self", "Self", "static", "struct",
+	"super", "trait", "type", "unsafe", "use", "where", "while", "dyn", "true", "false",
+]
+const RUST_TYPES := [
+	"i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "u128", "usize", "f32", "f64",
+	"bool", "char", "str", "String", "Vec", "Option", "Result", "Some", "None", "Ok", "Err", "Box",
+]
+const COL_KEYWORD := Color("#ff8f5a")
+const COL_TYPE := Color("#6fe0c0")
+const COL_COMMENT := Color("#717791")
+const COL_STRING := Color("#b5e07a")
+const COL_NUMBER := Color("#d9a8ff")
+const COL_FUNC := Color("#8ec5ff")
+
+
 static func _rust_tokens(text: String) -> Array:
 	var ranges: Array = []
 	var re := RegEx.create_from_string("//[^\\n]*|\"(?:[^\"\\\\]|\\\\.)*\"|\\b\\d[\\d_]*(?:\\.\\d+)?\\b|[A-Za-z_][A-Za-z0-9_]*!?")
@@ -402,17 +419,17 @@ static func _rust_tokens(text: String) -> Array:
 		var tok := m.get_string()
 		var c := Color(0, 0, 0, 0)
 		if tok.begins_with("//"):
-			c = RustEditor.COL_COMMENT
+			c = COL_COMMENT
 		elif tok.begins_with("\""):
-			c = RustEditor.COL_STRING
+			c = COL_STRING
 		elif tok[0].is_valid_int():
-			c = RustEditor.COL_NUMBER
-		elif tok in RustEditor.KEYWORDS:
-			c = RustEditor.COL_KEYWORD
-		elif tok in RustEditor.PRIMITIVES or tok[0] == tok[0].to_upper():
-			c = RustEditor.COL_TYPE
+			c = COL_NUMBER
+		elif tok in RUST_KEYWORDS:
+			c = COL_KEYWORD
+		elif tok in RUST_TYPES or tok[0] == tok[0].to_upper():
+			c = COL_TYPE
 		elif tok.ends_with("!") or text.substr(m.get_end(), 1) == "(":
-			c = RustEditor.COL_FUNC
+			c = COL_FUNC
 		if c.a > 0:
 			ranges.append([m.get_start(), m.get_end(), c, "", false])
 	return ranges

@@ -1,0 +1,14 @@
+{
+  "id": "tidepool",
+  "name": "조수 웅덩이",
+  "crate": "tidepool",
+  "tagline": "꽃게의 두뇌를 짜서 밀물과 갈매기 사이에서 먹이를 모아요.",
+  "agent": "꽃게",
+  "colors": [
+    "#f4511e",
+    "#3fb6a8",
+    "#e2b33c",
+    "#b07cf0"
+  ],
+  "tick": "틱"
+}

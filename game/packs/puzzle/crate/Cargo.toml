@@ -1,0 +1,8 @@
+[package]
+name = "puzzle"
+version = "0.1.0"
+edition = "2021"
+description = "Crab Code 게임팩: 퍼즐"
+
+# 인터넷 없이 바로 빌드되도록 의존성이 없다.
+[dependencies]

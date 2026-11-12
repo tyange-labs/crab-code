@@ -1,11 +1,13 @@
-// crab-core 를 Godot 에 연결하는 확장.
+// crab-host 를 Godot 에 연결하는 확장.
 //
 // GDScript 에서 `CrabCore.new()` 로 만들어 쓴다. 값은 JSON 문자열로 주고받는다.
-// 컴파일은 오래 걸리므로 `start_run` / `start_check` 가 백그라운드 스레드를 띄우고,
-// 화면은 매 프레임 `poll_run` / `poll_check` 로 결과가 나왔는지 확인한다.
+// 빌드·실행은 오래 걸리므로 `start_run` 이 백그라운드 스레드를 띄우고,
+// 화면은 매 프레임 `poll_run` 으로 결과가 나왔는지 확인한다.
 
+use crab_host::{git, pack, run, watch::Watcher, workspace};
 use godot::prelude::*;
 use serde_json::{json, Value};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 struct CrabExtension;
@@ -30,7 +32,6 @@ impl Slot {
             let mut out = job();
             out["token"] = json!(token);
             let mut s = slot.lock().unwrap();
-            // 그 사이에 새 작업이 시작됐으면 이 결과는 버린다.
             if s.0 == token {
                 s.1 = Some(out.to_string());
             }
@@ -43,33 +44,64 @@ impl Slot {
     }
 }
 
+fn gs(v: &Value) -> GString {
+    GString::from(&v.to_string())
+}
+
+fn err(e: impl ToString) -> GString {
+    gs(&json!({ "ok": false, "error": e.to_string() }))
+}
+
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct CrabCore {
     run_slot: Slot,
-    check_slot: Slot,
+    watcher: Arc<Mutex<Watcher>>,
 }
 
 #[godot_api]
 impl CrabCore {
-    /// 장 목록과 레슨 목록 (JSON).
+    /// 기본 작업 폴더 (~/CrabCode, CRAB_WORKSPACE 로 바꿀 수 있다).
     #[func]
-    fn lessons(&self) -> GString {
-        GString::from(&crab_core::game::lessons_json().to_string())
+    fn default_workspace(&self) -> GString {
+        GString::from(&workspace::default_root().to_string_lossy().to_string())
     }
 
-    /// 레벨의 처음 상태 (JSON).
+    /// packs_dir 아래의 게임팩 목록 (JSON 배열).
     #[func]
-    fn world(&self, level: i64, seed: i64) -> GString {
-        GString::from(&crab_core::game::get_world(level.max(0) as usize, seed as u64).to_string())
+    fn packs(&self, packs_dir: GString) -> GString {
+        let list: Vec<Value> = pack::list(Path::new(&packs_dir.to_string())).iter().map(|p| p.to_json()).collect();
+        gs(&json!(list))
     }
 
-    /// 코드를 컴파일하고 실행하기 시작한다. 결과는 poll_run 으로 받는다.
+    /// 작업 폴더를 준비한다 (없으면 만들고 git 저장소도 만든다).
+    /// git_name·git_email 이 비어 있지 않으면 이 저장소의 커밋에만 그 이름·이메일을 쓴다. 서명은 끈다.
     #[func]
-    fn start_run(&self, code: GString, level: i64, seed: i64) -> i64 {
-        let code = code.to_string();
-        self.run_slot
-            .start(move || crab_core::game::run_code(&code, level.max(0) as usize, seed as u64)) as i64
+    fn ensure_workspace(&self, root: GString, packs_dir: GString, pack_id: GString, git_name: GString, git_email: GString) -> GString {
+        let root = PathBuf::from(root.to_string());
+        let (name, email) = (git_name.to_string(), git_email.to_string());
+        let identity = (!name.trim().is_empty() && !email.trim().is_empty()).then_some((name.trim(), email.trim()));
+        match pack::find(Path::new(&packs_dir.to_string()), &pack_id.to_string()) {
+            Ok(p) => match workspace::ensure(&root, &p, identity) {
+                Ok(v) => {
+                    self.watcher.lock().unwrap().forget_changes(&root, &p);
+                    gs(&v)
+                }
+                Err(e) => err(e),
+            },
+            Err(e) => err(e),
+        }
+    }
+
+    /// 레벨을 빌드하고 실행하기 시작한다. 결과는 poll_run 으로 받는다.
+    #[func]
+    fn start_run(&self, root: GString, packs_dir: GString, pack_id: GString, level_id: GString, seed: i64) -> i64 {
+        let (root, packs_dir, pack_id, level_id) =
+            (root.to_string(), packs_dir.to_string(), pack_id.to_string(), level_id.to_string());
+        self.run_slot.start(move || match pack::find(Path::new(&packs_dir), &pack_id) {
+            Ok(p) => run::build_and_run(Path::new(&root), &p, &level_id, seed as u64),
+            Err(e) => json!({ "compiled": false, "output": e, "diagnostics": [] }),
+        }) as i64
     }
 
     /// 실행 결과가 나왔으면 JSON, 아직이면 빈 문자열.
@@ -78,70 +110,74 @@ impl CrabCore {
         GString::from(&self.run_slot.take())
     }
 
-    /// 컴파일 에러만 확인하기 시작한다. 결과는 poll_check 로 받는다.
+    /// 지난번 이후 IDE 에서 저장된 레벨 id 들 (JSON 배열).
     #[func]
-    fn start_check(&self, code: GString) -> i64 {
-        let code = code.to_string();
-        self.check_slot
-            .start(move || json!({ "diagnostics": crab_core::game::check_code(&code) })) as i64
+    fn poll_changes(&self, root: GString, packs_dir: GString, pack_id: GString) -> GString {
+        match pack::find(Path::new(&packs_dir.to_string()), &pack_id.to_string()) {
+            Ok(p) => gs(&json!(self.watcher.lock().unwrap().poll(Path::new(&root.to_string()), &p))),
+            Err(_) => GString::from("[]"),
+        }
+    }
+
+    /// 레벨 파일을 처음 코드로 되돌린다 (지금 코드는 먼저 커밋해 둔다).
+    #[func]
+    fn reset_level(&self, root: GString, packs_dir: GString, pack_id: GString, level_id: GString) -> GString {
+        let root = PathBuf::from(root.to_string());
+        match pack::find(Path::new(&packs_dir.to_string()), &pack_id.to_string()) {
+            Ok(p) => {
+                let out = workspace::reset_level(&root, &p, &level_id.to_string());
+                self.watcher.lock().unwrap().forget_changes(&root, &p);
+                match out {
+                    Ok(v) => gs(&v),
+                    Err(e) => err(e),
+                }
+            }
+            Err(e) => err(e),
+        }
+    }
+
+    /// 클리어 기록 (JSON: {팩: {레벨: {cleared, best:{ticks, lines}}}}).
+    #[func]
+    fn progress(&self, root: GString) -> GString {
+        gs(&workspace::progress(Path::new(&root.to_string())))
+    }
+
+    /// 클리어를 기록하고 git 에 커밋한다.
+    #[func]
+    fn record_clear(&self, root: GString, packs_dir: GString, pack_id: GString, level_id: GString, ticks: i64, lines: i64) -> GString {
+        match pack::find(Path::new(&packs_dir.to_string()), &pack_id.to_string()) {
+            Ok(p) => match workspace::record_clear(
+                Path::new(&root.to_string()),
+                &p,
+                &level_id.to_string(),
+                ticks as u64,
+                lines as u64,
+            ) {
+                Ok(v) => gs(&v),
+                Err(e) => err(e),
+            },
+            Err(e) => err(e),
+        }
+    }
+
+    /// 마지막 커밋 (JSON: {hash, subject, when} 또는 null).
+    #[func]
+    fn last_commit(&self, root: GString) -> GString {
+        match git::last_commit(Path::new(&root.to_string())) {
+            Some((hash, subject, when)) => gs(&json!({ "hash": hash, "subject": subject, "when": when })),
+            None => GString::from("null"),
+        }
+    }
+
+    /// 전역 git 설정의 이름·이메일 (JSON: {name, email}). 작업 폴더를 만들 때 기본값으로 보여 준다.
+    #[func]
+    fn git_identity(&self) -> GString {
+        let (name, email) = git::global_identity();
+        gs(&json!({ "name": name, "email": email }))
     }
 
     #[func]
-    fn poll_check(&self) -> GString {
-        GString::from(&self.check_slot.take())
-    }
-
-    // ── 꽃게 AI 모드 (조수 웅덩이) ──
-
-    /// 꽃게 AI 레슨 목록 (JSON).
-    #[func]
-    fn pool_lessons(&self) -> GString {
-        GString::from(&crab_core::pool_game::lessons_json().to_string())
-    }
-
-    /// 읽기 전용 crab.rs 탭에 보여 줄 소스.
-    #[func]
-    fn pool_api(&self) -> GString {
-        GString::from(&crab_core::pool_game::api_source())
-    }
-
-    /// 레벨의 지도와 처음 모습 (JSON).
-    #[func]
-    fn pool_level(&self, level: i64, seed: i64) -> GString {
-        GString::from(&crab_core::pool_game::level_json(level.max(0) as usize, seed as u64).to_string())
-    }
-
-    /// 꽃게 AI 코드를 컴파일하고 실행하기 시작한다. 결과는 poll_run 으로 받는다.
-    #[func]
-    fn start_pool_run(&self, code: GString, level: i64, seed: i64) -> i64 {
-        let code = code.to_string();
-        self.run_slot
-            .start(move || crab_core::pool_game::run_code(&code, level.max(0) as usize, seed as u64)) as i64
-    }
-
-    /// 꽃게 AI 코드의 컴파일 에러만 확인하기 시작한다. 결과는 poll_check 로 받는다.
-    #[func]
-    fn start_pool_check(&self, code: GString) -> i64 {
-        let code = code.to_string();
-        self.check_slot
-            .start(move || json!({ "diagnostics": crab_core::pool_game::check_code(&code) })) as i64
-    }
-
-    /// 코드 줄 수 (빈 줄·주석 제외). 기록에 쓴다.
-    #[func]
-    fn code_lines(&self, code: GString) -> i64 {
-        crab_core::pool_game::code_lines(&code.to_string()) as i64
-    }
-
-    /// rustfmt 로 코드를 정리한다 (JSON: ok, code 또는 error). 금방 끝나므로 바로 돌려준다.
-    #[func]
-    fn format(&self, code: GString) -> GString {
-        GString::from(&crab_core::game::format_code(&code.to_string()).to_string())
-    }
-
-    /// 임시 폴더를 지운다. 게임을 끝낼 때 부른다.
-    #[func]
-    fn cleanup(&self) {
-        crab_core::game::cleanup();
+    fn git_available(&self) -> bool {
+        git::available()
     }
 }
