@@ -57,6 +57,7 @@ cargo run --release -p crab-host --bin verify-pack                      # 게임
 cargo run --release -p crab-host --bin verify-pack -- game/packs/puzzle # 팩 하나
 CRAB_WORKSPACE=/tmp/crab-ws godot --path game -s tests/ide_flow_test.gd # 저장 → 빌드 → 재생 → 클리어 커밋 흐름
 CRAB_TEST_SETUP=1 CRAB_WORKSPACE=/tmp/crab-ws2 godot --path game -s tests/ide_flow_test.gd  # 처음 창부터
+CRAB_WORKSPACE=/tmp/crab-full godot --path game -s tests/full_clear_test.gd  # 모든 레벨을 정답으로 차례로 클리어 (오래 걸림)
 cargo run -p crab-host --example run_level -- <작업 폴더> <팩> <레벨>    # 레벨 하나를 게임과 똑같이 돌려 보기
 ```
 
