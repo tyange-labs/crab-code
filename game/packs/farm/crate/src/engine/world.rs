@@ -247,6 +247,7 @@ pub struct View {
     crop_dir: Option<Dir>,
     barn_dir: Option<Dir>,
     plot_dir: Option<Dir>,
+    ripe: Vec<(i32, i32)>,
     flood: Flood,
     delivered: u32,
     goal: u32,
@@ -296,6 +297,11 @@ impl View {
     /// 창고로 가는 첫걸음. 이미 창고 위라면 None.
     pub fn barn_dir(&self) -> Option<Dir> {
         self.barn_dir
+    }
+
+    /// 땅에 놓인(다 자란) 열매 전부의 위치. 가까운 순서가 아니라 놓인 순서예요.
+    pub fn ripe(&self) -> Vec<(i32, i32)> {
+        self.ripe.clone()
     }
 
     /// 손이 필요한 이랑(빈 이랑이나 물을 안 준 씨앗)으로 가는 첫걸음. 없으면 None.
@@ -476,6 +482,27 @@ pub const SPECS: &[Spec] = &[
         smell: u32::MAX,
         flood: None,
         random_crop: 0,
+        respawn: false,
+        reach: false,
+    },
+    Spec {
+        id: "harvest",
+        map: &[
+            "###############",
+            "#N............#",
+            "#..?.....?....#",
+            "#......?......#",
+            "#?.......?..?.#",
+            "#....?........#",
+            "#.?.......?...#",
+            "###############",
+        ],
+        farmers: 1,
+        goal: 6,
+        max_ticks: 140,
+        smell: 0,
+        flood: None,
+        random_crop: 7,
         respawn: false,
         reach: false,
     },
@@ -764,6 +791,7 @@ impl Field {
             carrying: c.carrying.is_some(),
             crop_dir,
             barn_dir: self.first_step((c.x, c.y), |x, y| (x, y) == barn).map(|(d, _)| d),
+            ripe: self.crops.iter().filter(|f| f.state == CropState::Ground).map(|f| (f.x, f.y)).collect(),
             plot_dir: self.first_step((c.x, c.y), |x, y| self.plot_needs_work(x, y)).map(|(d, _)| d),
             flood: self.flood_now(),
             delivered: self.delivered,

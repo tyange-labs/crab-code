@@ -28,6 +28,19 @@ static func focus_ring() -> StyleBoxFlat:
 	return s
 
 
+## Sunnyside 의 9칸 상자 그림으로 만든 버튼 면 (모서리 3px).
+static func sprite_box(path: String, tint := Color.WHITE) -> StyleBoxTexture:
+	var s := StyleBoxTexture.new()
+	s.texture = load(path)
+	s.set_texture_margin_all(3)
+	s.content_margin_left = 16
+	s.content_margin_right = 16
+	s.content_margin_top = 8
+	s.content_margin_bottom = 8
+	s.modulate_color = tint
+	return s
+
+
 static func _pressable(color: Color) -> StyleBoxFlat:
 	var s := box(color, 8, 16, 8)
 	s.border_width_bottom = 3
@@ -51,14 +64,14 @@ static func build() -> Theme:
 	t.set_font_size("font_size", "PixelTitle", Palette.PIXEL_SIZE * 2)
 
 	# 버튼 (아래쪽에 2px 그림자 테두리를 둬서 눌리는 느낌)
-	t.set_stylebox("normal", "Button", _pressable(Palette.PANEL_HI))
-	t.set_stylebox("hover", "Button", _pressable(Palette.PANEL_HI.darkened(0.05)))
-	t.set_stylebox("pressed", "Button", box(Palette.PANEL_HI.darkened(0.1), 8, 16, 8))
+	t.set_stylebox("normal", "Button", sprite_box("res://assets/ui_btn.png"))
+	t.set_stylebox("hover", "Button", sprite_box("res://assets/ui_btn.png", Color(1.08, 1.08, 1.08)))
+	t.set_stylebox("pressed", "Button", sprite_box("res://assets/ui_btn_down.png"))
 	t.set_stylebox("disabled", "Button", box(Palette.PANEL_HI.lightened(0.3), 8, 16, 8))
 	t.set_stylebox("focus", "Button", focus_ring())
 	t.set_color("font_color", "Button", Palette.TEXT)
 	t.set_color("font_hover_color", "Button", Palette.TEXT)
-	t.set_color("font_pressed_color", "Button", Palette.TEXT)
+	t.set_color("font_pressed_color", "Button", Color("#fff3e0"))
 	t.set_color("font_focus_color", "Button", Palette.TEXT)
 	t.set_color("font_disabled_color", "Button", Palette.DIM)
 

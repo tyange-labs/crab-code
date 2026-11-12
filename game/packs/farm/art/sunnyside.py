@@ -109,6 +109,14 @@ def build_decor():
     for i, n in enumerate(names):
         box.paste(load(SRC / "UI" / f"dt_box_9slice_{n}.png"), ((i % 3) * 3, (i // 3) * 3))
     box.save(OUT / "hud_box.png")
+    # 게임 본체의 버튼 상자 (팩과 상관없이 쓰므로 game/assets/ 에): 밝은 상자·갈색 상자
+    ui = HERE.parent.parent.parent / "assets"
+    ui.mkdir(exist_ok=True)
+    for prefix, name in (("lt", "ui_btn.png"), ("dt", "ui_btn_down.png")):
+        b = Image.new("RGBA", (9, 9))
+        for i, n in enumerate(names):
+            b.paste(load(SRC / "UI" / f"{prefix}_box_9slice_{n}.png"), ((i % 3) * 3, (i // 3) * 3))
+        b.save(ui / name)
 
 
 def strip_frames(path, n):
