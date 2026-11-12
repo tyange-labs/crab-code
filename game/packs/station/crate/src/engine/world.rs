@@ -802,6 +802,30 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 30,
     },
+    Spec {
+        id: "sweep",
+        map: &[
+            "#####################",
+            "#N..................#",
+            "#....?.......?......#",
+            "#..........?........#",
+            "#...?.........?.....#",
+            "#............?......#",
+            "#.?..........?...?..#",
+            "#......?............#",
+            "#####################",
+        ],
+        bots: 1,
+        goal: 6,
+        max_ticks: 300,
+        smell: 0,
+        pressure: None,
+        random_core: 6,
+        respawn: false,
+        reach: false,
+        slot_sense: true,
+        sight: 3,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();
