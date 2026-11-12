@@ -342,7 +342,7 @@ func _inline_runs(text: String) -> Array:
 	if not runs.is_empty() and not runs[0].code and runs[0].text.begins_with("목표:"):
 		var first: Dictionary = runs[0]
 		runs[0] = {"text": first.text.substr(3), "code": false, "bold": first.bold, "italic": first.italic, "link": ""}
-		runs.insert(0, {"text": "목표:", "code": false, "bold": true, "italic": false, "link": "", "color": Palette.ACCENT})
+		runs.insert(0, {"text": "목표:", "code": false, "bold": true, "italic": false, "link": "", "color": Palette.ACCENT_TEXT})
 	return runs
 
 

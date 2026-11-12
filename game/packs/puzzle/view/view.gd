@@ -14,6 +14,16 @@
 ## 그림은 assets/sheet.png (../art/sprites.py 가 만든다). 16픽셀 격자에 그린 뒤 정수 배율로 키운다.
 extends Control
 
+# HUD 글자색: 어두운 세계 위에 그리므로 UI 테마(Palette)와 따로 둔다.
+const HUD_TEXT := Color("#e4e6f0")
+const HUD_DIM := Color("#9aa0ba")
+const HUD_FAINT := Color("#7f85a3")
+const HUD_CODE := Color("#ffc66d")
+const HUD_WARN := Color("#f2c94c")
+const HUD_SKY := Color("#5cb8ff")
+const HUD_GREEN := Color("#5fd38d")
+
+
 signal agent_selected(index: int)
 
 const DX := [1, 0, -1, 0]
@@ -92,17 +102,17 @@ func play_effects(t: int) -> void:
 			Sfx.play("turn")
 		"collect":
 			Sfx.play("collect")
-			_burst(here, Palette.WARN, 18)
+			_burst(here, HUD_WARN, 18)
 		"deposit":
 			Sfx.play("deposit")
-			_burst(here, Palette.GREEN, 22)
+			_burst(here, HUD_GREEN, 22)
 		"polish":
 			Sfx.play("polish")
 			_burst(here, Color.WHITE, 14)
 		"unlock":
 			Sfx.play("unlock")
 			if w.door != null:
-				_burst(_cell_center(Vector2(w.door.x, w.door.y)), Palette.SKY, 26)
+				_burst(_cell_center(Vector2(w.door.x, w.door.y)), HUD_SKY, 26)
 
 
 func celebrate() -> void:
@@ -212,7 +222,7 @@ func _draw() -> void:
 	var fs := Palette.PIXEL_SIZE * maxi(1, _scale / 2)
 	for n in w.numbers:
 		_sprite(Sprite.NUMBER, Vector2(n.x, n.y) * T)
-		_label(str(n.n), _cell_center(Vector2(n.x, n.y)), fs, Palette.SKY, digits)
+		_label(str(n.n), _cell_center(Vector2(n.x, n.y)), fs, HUD_SKY, digits)
 
 	for s in w.signs:
 		if s.sign == "left":
@@ -309,24 +319,24 @@ func _draw_crab(a: Dictionary, b: Dictionary, f: float, moving: bool) -> void:
 func _draw_hud(w: Dictionary, step: int) -> void:
 	var font := Palette.pixel_font()
 	var x := 12.0
-	x = _chip(x, "행동 %d / %d" % [step, last_tick()], Palette.TEXT, font)
+	x = _chip(x, "행동 %d / %d" % [step, last_tick()], HUD_TEXT, font)
 	var held: Array = w.gems.filter(func(g): return g.held)
 	var bag_w := 52.0 + maxf(held.size(), 1) * 18.0
 	_chip_box(x, bag_w)
-	_text(x + 10, "가방", Palette.DIM, font)
+	_text(x + 10, "가방", HUD_DIM, font)
 	if held.is_empty():
-		_text(x + 42, "-", Palette.FAINT, font)
+		_text(x + 42, "-", HUD_FAINT, font)
 	for i in held.size():
 		draw_texture_rect_region(_sheet, Rect2(x + 40 + i * 18.0, 12, 16, 16), Rect2(_gem_sprite(held[i]) * T, 0, T, T))
 	x += bag_w + 6.0
 	if w.dial != null:
-		x = _chip(x, "다이얼 %d" % w.dial, Palette.CODE, font)
+		x = _chip(x, "다이얼 %d" % w.dial, HUD_CODE, font)
 	if not w.scroll.is_empty():
-		x = _chip(x, "두루마리 [%s]" % ", ".join(PackedStringArray(w.scroll.map(func(n): return str(n)))), Palette.CODE, font)
+		x = _chip(x, "두루마리 [%s]" % ", ".join(PackedStringArray(w.scroll.map(func(n): return str(n)))), HUD_CODE, font)
 	if w.note != null:
-		x = _chip(x, "쪽지 %s" % JSON.stringify(w.note), Palette.CODE, font)
+		x = _chip(x, "쪽지 %s" % JSON.stringify(w.note), HUD_CODE, font)
 	if w.note2 != null:
-		x = _chip(x, "쪽지 2 %s" % JSON.stringify(w.note2), Palette.CODE, font)
+		x = _chip(x, "쪽지 2 %s" % JSON.stringify(w.note2), HUD_CODE, font)
 
 
 func _chip_box(x: float, w: float) -> void:

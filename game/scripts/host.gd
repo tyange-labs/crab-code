@@ -238,7 +238,7 @@ func _style_static_nodes() -> void:
 		l.add_theme_font_override("font", Palette.pixel_font())
 	%Slash.add_theme_color_override("font_color", Palette.TEXT3)
 	%Slash.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
-	%GoalLabel.add_theme_color_override("font_color", Palette.ACCENT)
+	%GoalLabel.add_theme_color_override("font_color", Palette.ACCENT_TEXT)
 	%GoalLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%GoalText.callouts = false
 	%HintText.callouts = false
@@ -403,7 +403,7 @@ func _save_settings() -> void:
 
 func _show_setup(then: Callable) -> void:
 	var overlay := ColorRect.new()
-	overlay.color = Color(0.05, 0.06, 0.09, 0.82)
+	overlay.color = Color(Palette.BG, 0.9)
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(overlay)
@@ -661,7 +661,7 @@ func _status(kind: String, title: String, detail := "", action := "") -> void:
 	var fg := Palette.TEXT
 	match kind:
 		"building":
-			bg = Palette.SKY.darkened(0.78)
+			bg = Palette.SKY.lerp(Color.WHITE, 0.86)
 			dot = Palette.SKY
 		"error", "failed":
 			bg = Palette.RED_BG
@@ -676,7 +676,7 @@ func _status(kind: String, title: String, detail := "", action := "") -> void:
 		"ready":
 			dot = Palette.GREEN
 	var sb := UiTheme.box(bg, 8, 14, 6)
-	sb.border_color = Palette.BORDER if kind in ["idle", "ready", "playing"] else bg.lightened(0.15)
+	sb.border_color = Palette.BORDER if kind in ["idle", "ready", "playing"] else bg.darkened(0.1)
 	sb.set_border_width_all(2)
 	%StatusBar.add_theme_stylebox_override("panel", sb)
 	%StatusDot.color = dot
@@ -1091,7 +1091,8 @@ func _log_compiler(output: String, warnings_only: bool) -> void:
 
 func _agent_hex(i: int) -> String:
 	var colors: Array = pack.get("colors", [Palette.hex(Palette.ACCENT)])
-	return colors[i % colors.size()]
+	# 팩 색은 어두운 세계용이라 밝은 바탕의 글자로 쓸 때는 어둡게 한다.
+	return Palette.hex(Color(colors[i % colors.size()]).darkened(0.35))
 
 
 func _agent_tag(tick: int, agent: int) -> String:
@@ -1265,7 +1266,7 @@ func _build_success_card() -> void:
 	var sb := UiTheme.box(Color(Palette.PANEL, 0.97), 8, 24, 18)
 	sb.border_color = Palette.GREEN
 	sb.set_border_width_all(2)
-	sb.shadow_color = Color(0, 0, 0, 0.4)
+	sb.shadow_color = Color(0.3, 0.2, 0.1, 0.25)
 	sb.shadow_size = 12
 	_success.add_theme_stylebox_override("panel", sb)
 	%ViewHost.add_child(_success)

@@ -52,9 +52,9 @@ static func build() -> Theme:
 
 	# 버튼 (아래쪽에 2px 그림자 테두리를 둬서 눌리는 느낌)
 	t.set_stylebox("normal", "Button", _pressable(Palette.PANEL_HI))
-	t.set_stylebox("hover", "Button", _pressable(Palette.PANEL_HI.lightened(0.12)))
-	t.set_stylebox("pressed", "Button", box(Palette.PANEL_HI.darkened(0.15), 8, 16, 8))
-	t.set_stylebox("disabled", "Button", box(Palette.PANEL_HI.darkened(0.2), 8, 16, 8))
+	t.set_stylebox("hover", "Button", _pressable(Palette.PANEL_HI.darkened(0.05)))
+	t.set_stylebox("pressed", "Button", box(Palette.PANEL_HI.darkened(0.1), 8, 16, 8))
+	t.set_stylebox("disabled", "Button", box(Palette.PANEL_HI.lightened(0.3), 8, 16, 8))
 	t.set_stylebox("focus", "Button", focus_ring())
 	t.set_color("font_color", "Button", Palette.TEXT)
 	t.set_color("font_hover_color", "Button", Palette.TEXT)
@@ -67,7 +67,7 @@ static func build() -> Theme:
 	t.set_stylebox("normal", "PrimaryButton", _pressable(Palette.ACCENT))
 	t.set_stylebox("hover", "PrimaryButton", _pressable(Palette.ACCENT.lightened(0.12)))
 	t.set_stylebox("pressed", "PrimaryButton", box(Palette.ACCENT.darkened(0.15), 8, 16, 8))
-	t.set_stylebox("disabled", "PrimaryButton", box(Palette.ACCENT.darkened(0.35), 8, 16, 8))
+	t.set_stylebox("disabled", "PrimaryButton", box(Palette.ACCENT.lightened(0.45), 8, 16, 8))
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		t.set_color(c, "PrimaryButton", Palette.ON_ACCENT)
 	t.set_color("font_disabled_color", "PrimaryButton", Palette.ON_ACCENT.lightened(0.3))
@@ -89,7 +89,7 @@ static func build() -> Theme:
 	# 위험한 동작 (되돌리기 등)
 	t.set_type_variation("DangerButton", "Button")
 	t.set_stylebox("normal", "DangerButton", _pressable(Palette.RED_BG))
-	t.set_stylebox("hover", "DangerButton", _pressable(Palette.RED_BG.lightened(0.1)))
+	t.set_stylebox("hover", "DangerButton", _pressable(Palette.RED_BG.darkened(0.05)))
 	t.set_stylebox("pressed", "DangerButton", box(Palette.RED_BG.darkened(0.15), 8, 16, 8))
 	t.set_color("font_color", "DangerButton", Palette.RED)
 	t.set_color("font_hover_color", "DangerButton", Palette.RED)
@@ -99,14 +99,14 @@ static func build() -> Theme:
 		t.set_type_variation(kind, "Button")
 	var chip := func(kind: String, bg: Color, fg: Color) -> void:
 		t.set_stylebox("normal", kind, box(bg, 6, 9, 3))
-		t.set_stylebox("hover", kind, box(bg.lightened(0.12), 6, 9, 3))
+		t.set_stylebox("hover", kind, box(bg.darkened(0.06), 6, 9, 3))
 		t.set_stylebox("pressed", kind, box(bg.darkened(0.1), 6, 9, 3))
 		t.set_color("font_color", kind, fg)
 		t.set_color("font_hover_color", kind, fg)
 		t.set_color("font_pressed_color", kind, fg)
 		t.set_font_size("font_size", kind, Palette.PIXEL_SIZE)
 	chip.call("Chip", Palette.PANEL_HI, Palette.DIM)
-	chip.call("ChipCurrent", Palette.ACCENT, Color.WHITE)
+	chip.call("ChipCurrent", Palette.ACCENT, Palette.ON_ACCENT)
 	chip.call("ChipDone", Palette.GREEN_BG, Palette.GREEN)
 
 	# 패널

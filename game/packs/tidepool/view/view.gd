@@ -16,6 +16,16 @@
 ## 모든 것을 16픽셀 격자에 그린 뒤 정수 배율로 키워서 픽셀이 뭉개지지 않게 한다.
 extends Control
 
+# HUD 글자색: 어두운 세계 위에 그리므로 UI 테마(Palette)와 따로 둔다.
+const HUD_TEXT := Color("#e4e6f0")
+const HUD_DIM := Color("#9aa0ba")
+const HUD_FAINT := Color("#7f85a3")
+const HUD_CODE := Color("#ffc66d")
+const HUD_WARN := Color("#f2c94c")
+const HUD_SKY := Color("#5cb8ff")
+const HUD_GREEN := Color("#5fd38d")
+
+
 ## 꽃게를 눌렀을 때.
 signal agent_selected(index: int)
 
@@ -135,7 +145,7 @@ func _burst(cell: Vector2, color: Color, count: int) -> void:
 
 
 func celebrate() -> void:
-	var colors := [Palette.ACCENT, Palette.GREEN, Palette.SKY, Palette.WARN, Color("#b6ffe9")]
+	var colors := [Palette.ACCENT, HUD_GREEN, HUD_SKY, HUD_WARN, Color("#b6ffe9")]
 	var center := Vector2(map.get("w", 10), map.get("h", 6)) * T / 2.0
 	for i in 90:
 		var a := i * 2.399
@@ -323,11 +333,11 @@ func _draw_crab(i: int, ca: Dictionary, cb: Dictionary, f: float, e: float) -> v
 func _draw_hud(fr: Dictionary) -> void:
 	var font := Palette.pixel_font()
 	var x := 12.0
-	x = _chip(x, "틱 %d / %d" % [fr.tick, map.maxTicks], Palette.TEXT, font)
+	x = _chip(x, "틱 %d / %d" % [fr.tick, map.maxTicks], HUD_TEXT, font)
 	x = _chip(x, "배달 %d / %d" % [fr.delivered, map.goal], Color("#b6ffe9"), font)
 	match fr.tide.kind:
 		"low":
-			_chip(x, "썰물 · %d틱 뒤 밀물" % fr.tide.turnsLeft, Palette.WARN if fr.tide.turnsLeft <= 3 else Palette.SKY, font)
+			_chip(x, "썰물 · %d틱 뒤 밀물" % fr.tide.turnsLeft, HUD_WARN if fr.tide.turnsLeft <= 3 else HUD_SKY, font)
 		"high":
 			_chip(x, "밀물 · %d틱 뒤 빠짐" % fr.tide.turnsLeft, Color("#8fd0ff"), font)
 
