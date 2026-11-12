@@ -357,6 +357,9 @@ func _draw() -> void:
 		if i < a.farmers.size():
 			_draw_farmer(i, a.farmers[i], b.farmers[i] if i < b.farmers.size() else a.farmers[i], f, e)
 
+	if map.get("fog", false):
+		_draw_fog(a)
+
 	for p in _particles:
 		var lk := clampf(p.life, 0.0, 1.0)
 		if p.kind == "exp":
@@ -422,6 +425,20 @@ func _draw_decor(first: Vector2, count: Vector2) -> void:
 					draw_set_transform(Vector2.ZERO)
 				else:
 					draw_texture_rect_region(tex, dst, src)
+
+
+## 안개: 어느 농부에게서도 시야(걸음 수) 밖인 칸을 어둡게 가린다. (지도 안쪽만)
+func _draw_fog(fr: Dictionary) -> void:
+	var sight: int = map.get("sight", 7)
+	for y in map.h:
+		for x in map.w:
+			var seen := false
+			for c in fr.farmers:
+				if absi(c.x - x) + absi(c.y - y) <= sight:
+					seen = true
+					break
+			if not seen:
+				draw_rect(Rect2(_screen(Vector2(x, y) * T), Vector2(T, T) * _scale), Color(0.12, 0.15, 0.25, 0.55))
 
 
 func _near_open(x: int, y: int) -> bool:

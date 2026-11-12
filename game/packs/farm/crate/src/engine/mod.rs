@@ -57,6 +57,8 @@ fn map_json(p: &Field) -> Json {
         .num("goal", p.goal)
         .num("maxTicks", p.max_ticks)
         .num("farmers", p.farmers.len())
+        .bool("fog", !p.plot_sense)
+        .num("sight", p.sight)
         .json("flood", flood);
     map
 }
