@@ -5,7 +5,7 @@
 **새로 생긴 것**
 
 - `Action::Grab` — 발밑의 코어를 집어요.
-- `Action::Insert` — 들고 있는 코어를 내려놓아요. 반응로 위라면 코어 장착 완료, 곧 배달이에요!
+- `Action::Insert` — 들고 있는 코어를 내려놓아요. 반응로 위라면 장착이 끝나서 목표 개수에 세어져요!
 - `view.here()` — 발밑 칸. `Tile::Deck`, `Tile::Core`, `Tile::Reactor` 중 하나예요.
 - `view.carrying()` — 코어를 들고 있으면 `true`.
 
