@@ -41,6 +41,7 @@ fn map_json(p: &Field) -> Json {
             Ground::Reactor => 'N',
             Ground::Slot => 'p',
             Ground::Door => 'D',
+            Ground::Pad => 'C',
         })
         .collect();
     let mut pressure = Json::object();
@@ -60,6 +61,7 @@ fn map_json(p: &Field) -> Json {
         .num("bots", p.bots.len())
         .bool("fog", !p.slot_sense)
         .num("sight", p.sight)
+        .num("energyMax", p.energy_max)
         .json("pressure", pressure);
     map
 }
@@ -75,6 +77,7 @@ fn frame_json(p: &Field) -> Json {
         let mut j = Json::object();
         j.num("x", c.x)
             .num("y", c.y)
+            .num("energy", c.energy)
             .bool("carrying", c.carrying.is_some())
             .str("facing", dir_code(c.facing))
             .str(

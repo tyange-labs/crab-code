@@ -73,6 +73,7 @@ impl From<w::Tile> for crate::level2::Tile {
             w::Tile::Wall => crate::level2::Tile::Deck,
             w::Tile::Door(_) => crate::level2::Tile::Deck,
             w::Tile::Card(_) => crate::level2::Tile::Deck,
+            w::Tile::Pad => crate::level2::Tile::Deck,
             w::Tile::Duct => crate::level2::Tile::Deck,
             w::Tile::Void => crate::level2::Tile::Deck,
             w::Tile::Sentry => crate::level2::Tile::Deck,
@@ -121,6 +122,7 @@ impl From<w::Tile> for crate::level3::Tile {
             w::Tile::Wall => crate::level3::Tile::Deck,
             w::Tile::Door(_) => crate::level3::Tile::Deck,
             w::Tile::Card(_) => crate::level3::Tile::Deck,
+            w::Tile::Pad => crate::level3::Tile::Deck,
             w::Tile::Duct => crate::level3::Tile::Deck,
             w::Tile::Void => crate::level3::Tile::Deck,
             w::Tile::Sentry => crate::level3::Tile::Deck,
@@ -169,6 +171,7 @@ impl From<w::Tile> for crate::level4::Tile {
             w::Tile::Wall => crate::level4::Tile::Wall,
             w::Tile::Door(_) => crate::level4::Tile::Wall,
             w::Tile::Card(_) => crate::level4::Tile::Deck,
+            w::Tile::Pad => crate::level4::Tile::Deck,
             w::Tile::Duct => crate::level4::Tile::Deck,
             w::Tile::Void => crate::level4::Tile::Wall,
             w::Tile::Sentry => crate::level4::Tile::Deck,
@@ -217,6 +220,7 @@ impl From<w::Tile> for crate::level5::Tile {
             w::Tile::Wall => crate::level5::Tile::Wall,
             w::Tile::Door(_) => crate::level5::Tile::Wall,
             w::Tile::Card(_) => crate::level5::Tile::Deck,
+            w::Tile::Pad => crate::level5::Tile::Deck,
             w::Tile::Duct => crate::level5::Tile::Duct,
             w::Tile::Void => crate::level5::Tile::Void,
             w::Tile::Sentry => crate::level5::Tile::Deck,
@@ -274,6 +278,7 @@ impl From<w::Tile> for crate::level6::Tile {
             w::Tile::Wall => crate::level6::Tile::Wall,
             w::Tile::Door(_) => crate::level6::Tile::Wall,
             w::Tile::Card(_) => crate::level6::Tile::Deck,
+            w::Tile::Pad => crate::level6::Tile::Deck,
             w::Tile::Duct => crate::level6::Tile::Duct,
             w::Tile::Void => crate::level6::Tile::Void,
             w::Tile::Sentry => crate::level6::Tile::Sentry,
@@ -333,6 +338,7 @@ impl From<w::Tile> for crate::level7::Tile {
             w::Tile::Wall => crate::level7::Tile::Wall,
             w::Tile::Door(_) => crate::level7::Tile::Wall,
             w::Tile::Card(_) => crate::level7::Tile::Deck,
+            w::Tile::Pad => crate::level7::Tile::Deck,
             w::Tile::Duct => crate::level7::Tile::Duct,
             w::Tile::Void => crate::level7::Tile::Void,
             w::Tile::Sentry => crate::level7::Tile::Sentry,
@@ -394,6 +400,7 @@ impl From<w::Tile> for crate::level8::Tile {
             w::Tile::Wall => crate::level8::Tile::Wall,
             w::Tile::Door(_) => crate::level8::Tile::Wall,
             w::Tile::Card(_) => crate::level8::Tile::Deck,
+            w::Tile::Pad => crate::level8::Tile::Deck,
             w::Tile::Duct => crate::level8::Tile::Duct,
             w::Tile::Void => crate::level8::Tile::Void,
             w::Tile::Sentry => crate::level8::Tile::Sentry,
@@ -455,6 +462,7 @@ impl From<w::Tile> for crate::level9::Tile {
             w::Tile::Wall => crate::level9::Tile::Wall,
             w::Tile::Door(_) => crate::level9::Tile::Wall,
             w::Tile::Card(_) => crate::level9::Tile::Deck,
+            w::Tile::Pad => crate::level9::Tile::Deck,
             w::Tile::Duct => crate::level9::Tile::Duct,
             w::Tile::Void => crate::level9::Tile::Void,
             w::Tile::Sentry => crate::level9::Tile::Sentry,
@@ -516,6 +524,7 @@ impl From<w::Tile> for crate::level10::Tile {
             w::Tile::Wall => crate::level10::Tile::Wall,
             w::Tile::Door(_) => crate::level10::Tile::Wall,
             w::Tile::Card(_) => crate::level10::Tile::Deck,
+            w::Tile::Pad => crate::level10::Tile::Deck,
             w::Tile::Duct => crate::level10::Tile::Duct,
             w::Tile::Void => crate::level10::Tile::Void,
             w::Tile::Sentry => crate::level10::Tile::Sentry,
@@ -577,6 +586,7 @@ impl From<w::Tile> for crate::level11::Tile {
             w::Tile::Wall => crate::level11::Tile::Wall,
             w::Tile::Door(_) => crate::level11::Tile::Wall,
             w::Tile::Card(_) => crate::level11::Tile::Deck,
+            w::Tile::Pad => crate::level11::Tile::Deck,
             w::Tile::Duct => crate::level11::Tile::Duct,
             w::Tile::Void => crate::level11::Tile::Void,
             w::Tile::Sentry => crate::level11::Tile::Sentry,
@@ -638,6 +648,7 @@ impl From<w::Tile> for crate::level12::Tile {
             w::Tile::Wall => crate::level12::Tile::Wall,
             w::Tile::Door(_) => crate::level12::Tile::Wall,
             w::Tile::Card(_) => crate::level12::Tile::Deck,
+            w::Tile::Pad => crate::level12::Tile::Deck,
             w::Tile::Duct => crate::level12::Tile::Duct,
             w::Tile::Void => crate::level12::Tile::Void,
             w::Tile::Sentry => crate::level12::Tile::Sentry,
@@ -708,6 +719,7 @@ impl From<w::Tile> for crate::level13::Tile {
             w::Tile::Wall => crate::level13::Tile::Wall,
             w::Tile::Door(_) => crate::level13::Tile::Wall,
             w::Tile::Card(_) => crate::level13::Tile::Deck,
+            w::Tile::Pad => crate::level13::Tile::Deck,
             w::Tile::Duct => crate::level13::Tile::Duct,
             w::Tile::Void => crate::level13::Tile::Void,
             w::Tile::Sentry => crate::level13::Tile::Sentry,
@@ -778,6 +790,7 @@ impl From<w::Tile> for crate::level14::Tile {
             w::Tile::Wall => crate::level14::Tile::Wall,
             w::Tile::Door(_) => crate::level14::Tile::Wall,
             w::Tile::Card(_) => crate::level14::Tile::Deck,
+            w::Tile::Pad => crate::level14::Tile::Deck,
             w::Tile::Duct => crate::level14::Tile::Duct,
             w::Tile::Void => crate::level14::Tile::Void,
             w::Tile::Sentry => crate::level14::Tile::Sentry,
@@ -848,6 +861,7 @@ impl From<w::Tile> for crate::level15::Tile {
             w::Tile::Wall => crate::level15::Tile::Wall,
             w::Tile::Door(_) => crate::level15::Tile::Wall,
             w::Tile::Card(_) => crate::level15::Tile::Deck,
+            w::Tile::Pad => crate::level15::Tile::Deck,
             w::Tile::Duct => crate::level15::Tile::Duct,
             w::Tile::Void => crate::level15::Tile::Void,
             w::Tile::Sentry => crate::level15::Tile::Sentry,
@@ -918,6 +932,7 @@ impl From<w::Tile> for crate::level16::Tile {
             w::Tile::Wall => crate::level16::Tile::Wall,
             w::Tile::Door(_) => crate::level16::Tile::Wall,
             w::Tile::Card(_) => crate::level16::Tile::Deck,
+            w::Tile::Pad => crate::level16::Tile::Deck,
             w::Tile::Duct => crate::level16::Tile::Duct,
             w::Tile::Void => crate::level16::Tile::Void,
             w::Tile::Sentry => crate::level16::Tile::Sentry,
@@ -988,6 +1003,7 @@ impl From<w::Tile> for crate::level17::Tile {
             w::Tile::Wall => crate::level17::Tile::Wall,
             w::Tile::Door(_) => crate::level17::Tile::Wall,
             w::Tile::Card(_) => crate::level17::Tile::Deck,
+            w::Tile::Pad => crate::level17::Tile::Deck,
             w::Tile::Duct => crate::level17::Tile::Duct,
             w::Tile::Void => crate::level17::Tile::Void,
             w::Tile::Sentry => crate::level17::Tile::Sentry,
@@ -1058,6 +1074,7 @@ impl From<w::Tile> for crate::level18::Tile {
             w::Tile::Wall => crate::level18::Tile::Wall,
             w::Tile::Door(_) => crate::level18::Tile::Wall,
             w::Tile::Card(_) => crate::level18::Tile::Deck,
+            w::Tile::Pad => crate::level18::Tile::Deck,
             w::Tile::Duct => crate::level18::Tile::Duct,
             w::Tile::Void => crate::level18::Tile::Void,
             w::Tile::Sentry => crate::level18::Tile::Sentry,
@@ -1128,6 +1145,7 @@ impl From<w::Tile> for crate::level19::Tile {
             w::Tile::Wall => crate::level19::Tile::Wall,
             w::Tile::Door(_) => crate::level19::Tile::Wall,
             w::Tile::Card(_) => crate::level19::Tile::Deck,
+            w::Tile::Pad => crate::level19::Tile::Deck,
             w::Tile::Duct => crate::level19::Tile::Duct,
             w::Tile::Void => crate::level19::Tile::Void,
             w::Tile::Sentry => crate::level19::Tile::Sentry,
@@ -1198,6 +1216,7 @@ impl From<w::Tile> for crate::level20::Tile {
             w::Tile::Wall => crate::level20::Tile::Wall,
             w::Tile::Door(h) => crate::level20::Tile::Door(h.into()),
             w::Tile::Card(h) => crate::level20::Tile::Card(h.into()),
+            w::Tile::Pad => crate::level20::Tile::Deck,
             w::Tile::Duct => crate::level20::Tile::Duct,
             w::Tile::Void => crate::level20::Tile::Void,
             w::Tile::Sentry => crate::level20::Tile::Sentry,
@@ -1277,6 +1296,7 @@ impl From<w::Tile> for crate::level21::Tile {
             w::Tile::Wall => crate::level21::Tile::Wall,
             w::Tile::Door(h) => crate::level21::Tile::Door(h.into()),
             w::Tile::Card(h) => crate::level21::Tile::Card(h.into()),
+            w::Tile::Pad => crate::level21::Tile::Deck,
             w::Tile::Duct => crate::level21::Tile::Duct,
             w::Tile::Void => crate::level21::Tile::Void,
             w::Tile::Sentry => crate::level21::Tile::Sentry,
@@ -1310,6 +1330,86 @@ impl From<w::Hue> for crate::level21::Hue {
         match h {
             w::Hue::Red => crate::level21::Hue::Red,
             w::Hue::Blue => crate::level21::Hue::Blue,
+        }
+    }
+}
+
+// ── level22 ──
+impl From<crate::level22::Action> for w::Action {
+    fn from(a: crate::level22::Action) -> w::Action {
+        match a {
+            crate::level22::Action::Wait => w::Action::Wait,
+            crate::level22::Action::Move(d) => w::Action::Move(d.into()),
+            crate::level22::Action::Grab => w::Action::Grab,
+            crate::level22::Action::Insert => w::Action::Insert,
+            crate::level22::Action::Install => w::Action::Install,
+            crate::level22::Action::Charge => w::Action::Charge,
+        }
+    }
+}
+impl From<crate::level22::Dir> for w::Dir {
+    fn from(d: crate::level22::Dir) -> w::Dir {
+        match d {
+            crate::level22::Dir::North => w::Dir::North,
+            crate::level22::Dir::East => w::Dir::East,
+            crate::level22::Dir::South => w::Dir::South,
+            crate::level22::Dir::West => w::Dir::West,
+        }
+    }
+}
+impl From<w::Dir> for crate::level22::Dir {
+    fn from(d: w::Dir) -> crate::level22::Dir {
+        match d {
+            w::Dir::North => crate::level22::Dir::North,
+            w::Dir::East => crate::level22::Dir::East,
+            w::Dir::South => crate::level22::Dir::South,
+            w::Dir::West => crate::level22::Dir::West,
+        }
+    }
+}
+impl From<w::Tile> for crate::level22::Tile {
+    fn from(t: w::Tile) -> crate::level22::Tile {
+        match t {
+            w::Tile::Deck => crate::level22::Tile::Deck,
+            w::Tile::Core => crate::level22::Tile::Core,
+            w::Tile::Reactor => crate::level22::Tile::Reactor,
+            w::Tile::Wall => crate::level22::Tile::Wall,
+            w::Tile::Door(h) => crate::level22::Tile::Door(h.into()),
+            w::Tile::Card(h) => crate::level22::Tile::Card(h.into()),
+            w::Tile::Pad => crate::level22::Tile::Pad,
+            w::Tile::Duct => crate::level22::Tile::Duct,
+            w::Tile::Void => crate::level22::Tile::Void,
+            w::Tile::Sentry => crate::level22::Tile::Sentry,
+            w::Tile::Slot => crate::level22::Tile::Slot,
+            w::Tile::Module => crate::level22::Tile::Module,
+            w::Tile::Booting => crate::level22::Tile::Booting,
+        }
+    }
+}
+impl From<w::Pressure> for crate::level22::Pressure {
+    fn from(t: w::Pressure) -> crate::level22::Pressure {
+        match t {
+            w::Pressure::Safe { turns_left } => crate::level22::Pressure::Safe { turns_left },
+            w::Pressure::Vacuum { turns_left } => crate::level22::Pressure::Vacuum { turns_left },
+            w::Pressure::Stable => crate::level22::Pressure::Stable,
+        }
+    }
+}
+
+impl From<w::Sight> for crate::level22::SightError {
+    fn from(e: w::Sight) -> crate::level22::SightError {
+        match e {
+            w::Sight::OffMap => crate::level22::SightError::OffMap,
+            w::Sight::TooFar => crate::level22::SightError::TooFar,
+        }
+    }
+}
+
+impl From<w::Hue> for crate::level22::Hue {
+    fn from(h: w::Hue) -> crate::level22::Hue {
+        match h {
+            w::Hue::Red => crate::level22::Hue::Red,
+            w::Hue::Blue => crate::level22::Hue::Blue,
         }
     }
 }

@@ -35,7 +35,7 @@ const FARMER_FILES := ["bot_0", "bot_1", "bot_2", "bot_3"]
 const ACTOR := 24 # 로봇·경비 드론 그림 한 프레임의 픽셀 수
 const DIR_VEC := {"N": Vector2(0, -1), "E": Vector2(1, 0), "S": Vector2(0, 1), "W": Vector2(-1, 0)}
 # tiles.png 안의 순서
-enum Tile { GRASS0, GRASS1, DECK0, DECK1, DUCT0, DUCT1, WALL0, WALL1, VOID0, VOID1, VENT0, VENT1, REACTOR, SLOT, DOOR_RED, DOOR_BLUE, CARD_RED, CARD_BLUE }
+enum Tile { GRASS0, GRASS1, DECK0, DECK1, DUCT0, DUCT1, WALL0, WALL1, VOID0, VOID1, VENT0, VENT1, REACTOR, SLOT, DOOR_RED, DOOR_BLUE, CARD_RED, CARD_BLUE, PAD }
 # Kenney 1-Bit Pack 안의 아이콘 (열, 줄)
 const ICON_BUBBLES := Vector2i(35, 11)
 const ICON_SPARKLE := Vector2i(36, 11)
@@ -316,6 +316,8 @@ func _draw() -> void:
 					_draw_tile(cell, Tile.REACTOR)
 				"p":
 					_draw_tile(cell, Tile.SLOT)
+				"C":
+					_draw_tile(cell, Tile.PAD)
 				_:
 					_draw_tile(cell, Tile.DECK0 + h % 2)
 
@@ -487,6 +489,9 @@ func _draw_hud(fr: Dictionary) -> void:
 	var x := 12.0
 	x = _chip(x, "틱 %d / %d" % [fr.tick, map.maxTicks], HUD_TEXT, font)
 	x = _chip(x, "장착 %d / %d" % [fr.delivered, map.goal], Color("#35e0ff"), font)
+	if map.get("energyMax", 0) > 0 and not fr.bots.is_empty():
+		var e: int = fr.bots[clampi(selected, 0, fr.bots.size() - 1)].energy
+		x = _chip(x, "에너지 %d / %d" % [e, map.energyMax], HUD_WARN if e <= 5 else Color("#35e0ff"), font)
 	match fr.pressure.kind:
 		"low":
 			_chip(x, "기압 정상 · %d틱 뒤 감압" % fr.pressure.turnsLeft, HUD_WARN if fr.pressure.turnsLeft <= 3 else HUD_SKY, font)

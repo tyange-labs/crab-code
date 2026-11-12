@@ -190,6 +190,21 @@ def card_tile(col):
     return im
 
 
+def pad_tile():
+    im = deck_tile(0)
+    for y in range(16):
+        for x in range(16):
+            d = math.hypot(x - 7.5, y - 7.5)
+            if 4.4 <= d <= 5.6:
+                px(im, x, y, C("#2a8aa0"))
+    # 번개 표시
+    for (x, y) in ((8, 4), (7, 5), (7, 6), (6, 7), (8, 7), (7, 8), (7, 9), (8, 10), (9, 11)):
+        px(im, x, y, AMBER)
+    px(im, 8, 6, WHITE)
+    px(im, 8, 8, WHITE)
+    return im
+
+
 def build_tiles():
     tiles = [
         space_tile(0), space_tile(1),
@@ -200,6 +215,7 @@ def build_tiles():
         vent_overlay(0), vent_overlay(1),
         reactor_tile(), slot_tile(),
         door_tile(RED), door_tile(BLUE), card_tile(RED), card_tile(BLUE),
+        pad_tile(),
     ]
     atlas = blank(16 * len(tiles), 16)
     for i, t in enumerate(tiles):

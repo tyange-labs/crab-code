@@ -119,6 +119,8 @@ pub enum Tile {
     Door(Hue),
     /// 바닥에 놓인 키카드. 밟으면 줍는다.
     Card(Hue),
+    /// 충전 패드. 위에 서 있으면 에너지가 가득 찬다.
+    Pad,
 }
 
 impl Tile {
@@ -191,6 +193,7 @@ pub enum Ground {
     Reactor,
     Slot,
     Door,
+    Pad,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -217,6 +220,8 @@ pub struct BotState {
     pub hiding: u32,
     /// 가진 키카드.
     pub keys: Vec<Hue>,
+    /// 남은 에너지 (걸을 때마다 1 줄고, 반응로나 충전 패드에서 가득 찬다).
+    pub energy: u32,
 }
 
 #[derive(Clone, Debug)]
@@ -302,6 +307,10 @@ pub struct View {
     ripe: Vec<(i32, i32)>,
     radar: String,
     briefing: String,
+    energy: u32,
+    energy_max: u32,
+    pads: Vec<(i32, i32)>,
+    reactor: (i32, i32),
     keys: Vec<Hue>,
     card_dir: Option<Dir>,
     door_dir: Option<Dir>,
@@ -357,6 +366,26 @@ impl View {
     /// 반응로로 가는 첫걸음. 이미 반응로 위라면 None.
     pub fn reactor_dir(&self) -> Option<Dir> {
         self.reactor_dir
+    }
+
+    /// 남은 에너지 (걸을 수 있는 걸음 수).
+    pub fn energy(&self) -> u32 {
+        self.energy
+    }
+
+    /// 한 번 충전으로 걸을 수 있는 걸음 수 (제한이 없으면 0).
+    pub fn energy_max(&self) -> u32 {
+        self.energy_max
+    }
+
+    /// 충전 패드 위치들.
+    pub fn pads(&self) -> Vec<(i32, i32)> {
+        self.pads.clone()
+    }
+
+    /// 반응로 위치.
+    pub fn reactor(&self) -> (i32, i32) {
+        self.reactor
     }
 
     /// 작전 지시문. 레벨마다 정해진 글이다.
@@ -465,6 +494,8 @@ pub struct Spec {
     sight: i32,
     /// 작전 지시문 (없으면 빈 글).
     briefing: &'static str,
+    /// 로봇이 한 번 충전으로 걸을 수 있는 걸음 수 (0 이면 제한 없음).
+    energy: u32,
 }
 
 // 지도 기호
@@ -488,6 +519,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "carry",
@@ -503,6 +535,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "smell",
@@ -526,6 +559,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "maze",
@@ -549,6 +583,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "vacuum",
@@ -570,6 +605,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "swarm",
@@ -595,6 +631,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "install",
@@ -617,6 +654,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "salvage",
@@ -641,6 +679,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "hub",
@@ -665,6 +704,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "sentries",
@@ -689,6 +729,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "chores",
@@ -713,6 +754,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "scout",
@@ -737,6 +779,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: false,
         sight: 7,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "fog",
@@ -763,6 +806,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: false,
         sight: 3,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "relay",
@@ -787,6 +831,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 30,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "radar",
@@ -811,6 +856,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 30,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "ledger",
@@ -837,6 +883,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: false,
         sight: 3,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "route",
@@ -864,6 +911,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 40,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "generic",
@@ -888,6 +936,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 30,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "sweep",
@@ -913,6 +962,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 3,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "vault",
@@ -936,6 +986,7 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 40,
         briefing: "",
+        energy: 0,
     },
     Spec {
         id: "briefing",
@@ -959,6 +1010,29 @@ pub const SPECS: &[Spec] = &[
         slot_sense: true,
         sight: 40,
         briefing: "E3 S2 G W3 N2 I Q7 E8 S4 G W8 N4 E? I",
+        energy: 0,
+    },
+    Spec {
+        id: "energy",
+        map: &[
+            "#######################",
+            "#N.......C.....f......#",
+            "#.....................#",
+            "#.............f.......#",
+            "#######################",
+        ],
+        bots: 1,
+        goal: 2,
+        max_ticks: 120,
+        smell: u32::MAX,
+        pressure: None,
+        random_core: 0,
+        respawn: false,
+        reach: false,
+        slot_sense: true,
+        sight: 40,
+        briefing: "",
+        energy: 20,
     },
 ];
 
@@ -987,6 +1061,7 @@ pub struct Field {
     pub slot_sense: bool,
     pub sight: i32,
     pub briefing: &'static str,
+    pub energy_max: u32,
     pub spots: Vec<(i32, i32)>,
     rng: u64,
     /// 지난 틱에 일어난 일: (로봇 번호, 설명)
@@ -1027,6 +1102,7 @@ pub fn build(level: usize, seed: u64) -> Field {
         slot_sense: spec.slot_sense,
         sight: spec.sight,
         briefing: spec.briefing,
+        energy_max: spec.energy,
         spots: Vec::new(),
         rng: seed ^ 0xC0FF_EE15_BEEF,
         events: Vec::new(),
@@ -1047,6 +1123,7 @@ pub fn build(level: usize, seed: u64) -> Field {
                     field.ground[i] = Ground::Reactor;
                     field.reactor = (x, y);
                 }
+                'C' => field.ground[i] = Ground::Pad,
                 'R' | 'B' => {
                     field.ground[i] = Ground::Door;
                     field.doors.push(DoorState { x, y, hue: if ch == 'R' { Hue::Red } else { Hue::Blue }, open: false });
@@ -1069,6 +1146,7 @@ pub fn build(level: usize, seed: u64) -> Field {
             mishap: Mishap::None,
             hiding: 0,
             keys: Vec::new(),
+            energy: spec.energy,
         });
     }
     for _ in 0..spec.random_core {
@@ -1158,7 +1236,7 @@ impl Field {
     /// 로봇이 걸어 다닐 수 있는 칸 (기압은 따지지 않는다).
     fn walkable(&self, x: i32, y: i32) -> bool {
         match self.ground_at(x, y) {
-            Ground::Deck | Ground::Duct | Ground::Reactor | Ground::Slot => true,
+            Ground::Deck | Ground::Duct | Ground::Reactor | Ground::Slot | Ground::Pad => true,
             Ground::Door => self.door_at(x, y).map_or(false, |d| d.open),
             _ => false,
         }
@@ -1185,6 +1263,7 @@ impl Field {
             Ground::Void => Tile::Void,
             Ground::Duct if self.vented() => Tile::Void,
             Ground::Reactor => Tile::Reactor,
+            Ground::Pad => Tile::Pad,
             Ground::Door => match self.door_at(x, y) {
                 Some(d) if !d.open => Tile::Door(d.hue),
                 _ => Tile::Deck,
@@ -1304,6 +1383,13 @@ impl Field {
             },
             radar: self.radar_text(),
             briefing: self.briefing.to_string(),
+            energy: c.energy,
+            energy_max: self.energy_max,
+            pads: (0..self.h)
+                .flat_map(|gy| (0..self.w).map(move |gx| (gx, gy)))
+                .filter(|&(gx, gy)| self.ground_at(gx, gy) == Ground::Pad)
+                .collect(),
+            reactor: self.reactor,
             keys: c.keys.clone(),
             card_dir: self.first_step((c.x, c.y), |x, y| self.card_at(x, y).is_some()).map(|(d, _)| d),
             door_dir: self.first_step((c.x, c.y), |x, y| {
@@ -1360,6 +1446,11 @@ impl Field {
                     let (dx, dy) = d.delta();
                     let (nx, ny) = (x + dx, y + dy);
                     self.bots[i].facing = d;
+                    if self.energy_max > 0 && self.bots[i].energy == 0 {
+                        self.bots[i].mishap = Mishap::Bump;
+                        self.events.push((i, "에너지가 바닥났어요. 반응로나 충전 패드에서 충전하세요.".into()));
+                        continue;
+                    }
                     // 잠긴 문: 같은 색 키카드가 있으면 연다.
                     let closed_door = self.door_at(nx, ny).filter(|dr| !dr.open).map(|dr| (dr.hue, dr.x, dr.y));
                     if let Some((hue, dx0, dy0)) = closed_door {
@@ -1382,6 +1473,9 @@ impl Field {
                     } else {
                         self.bots[i].x = nx;
                         self.bots[i].y = ny;
+                        if self.energy_max > 0 {
+                            self.bots[i].energy -= 1;
+                        }
                         if let Some(f) = self.bots[i].carrying {
                             self.cores[f].x = nx;
                             self.cores[f].y = ny;
@@ -1447,6 +1541,17 @@ impl Field {
         }
 
         self.tick += 1;
+
+        // 반응로나 충전 패드 위에서는 에너지가 가득 찬다.
+        if self.energy_max > 0 {
+            for i in 0..self.bots.len() {
+                let (x, y) = (self.bots[i].x, self.bots[i].y);
+                if matches!(self.ground_at(x, y), Ground::Reactor | Ground::Pad) && self.bots[i].energy < self.energy_max {
+                    self.bots[i].energy = self.energy_max;
+                    self.events.push((i, "에너지를 가득 채웠어요.".into()));
+                }
+            }
+        }
 
         // 충전한 모듈은 부팅을 마치면 그 슬롯에 코어가 생긴다.
         for k in 0..self.slots.len() {

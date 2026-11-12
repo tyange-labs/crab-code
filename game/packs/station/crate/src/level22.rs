@@ -1,0 +1,274 @@
+//! # 정거장 복구 22 · 에너지
+//!
+//! 이 레벨에서 쓸 수 있는 것들이에요. 레벨 파일에서 `use station::level22::*;` 로 가져와요.
+//! 새로 생긴 것에는 표시가 있어요.
+
+use std::fmt::Debug;
+
+/// 로봇의 두뇌. 게임이 로봇마다 `new` 로 하나 만들고, 매 틱 `tick` 을 불러 할 일을 물어요.
+///
+/// 타임라인에서 로봇의 상태를 보여 주려고 `Debug` 가 필요해요. 구조체에 `#[derive(Debug)]` 를 붙여요.
+pub trait Bot: Debug {
+    /// 로봇을 하나 만들어요. `id` 는 0부터 차례로 붙는 번호예요.
+    fn new(id: usize) -> Self
+    where
+        Self: Sized;
+
+    /// 이번 틱에 할 일을 골라 돌려줘요. `view` 는 이 로봇이 지금 보는 것이에요 (빌려 받아요).
+    fn tick(&mut self, view: &View) -> Action;
+}
+
+/// 이 레벨을 `C` 로봇으로 플레이해요. `main` 에서 `play::<Echo>();` 처럼 불러요.
+pub fn play<C: Bot>() {
+    crate::engine::run("energy", C::new, |bot: &mut C, view| bot.tick(&View { inner: view }).into());
+}
+
+/// 로봇이 한 틱에 할 수 있는 일. `tick` 이 이 중 하나를 돌려주면 게임이 그대로 해 줘요.
+///
+/// 함수가 아니라 **값**이에요. `Action::Wait` 는 "가만히 있겠다"는 뜻의 값이고,
+/// `Action::Move(Dir::East)` 는 방향 값을 하나 품은 값이에요.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Action {
+    /// 가만히 있어요.
+    Wait,
+    /// 그쪽으로 한 칸 걸어요.
+    Move(Dir),
+    /// 발밑의 코어를 집어요.
+    Grab,
+    /// 들고 있는 코어를 내려놓아요. 반응로 위라면 장착 완료(배달)!
+    Insert,
+    /// 발밑 슬롯에 모듈을 설치해요.
+    Install,
+    /// 발밑 슬롯의 모듈을 충전해요. 충전해야 켜져요.
+    Charge,
+}
+
+/// 방향. 로봇은 몸을 돌리지 않고 어느 쪽으로든 걸어요.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum Dir {
+    North,
+    East,
+    South,
+    West,
+}
+
+impl Dir {
+    /// 시계 방향으로 90도 돈 방향.
+    pub fn turn_right(self) -> Dir {
+        match self {
+            Dir::North => Dir::East,
+            Dir::East => Dir::South,
+            Dir::South => Dir::West,
+            Dir::West => Dir::North,
+        }
+    }
+
+    /// 반시계 방향으로 90도 돈 방향.
+    pub fn turn_left(self) -> Dir {
+        self.turn_right().turn_right().turn_right()
+    }
+
+    /// 반대쪽.
+    pub fn opposite(self) -> Dir {
+        self.turn_right().turn_right()
+    }
+}
+
+/// 로봇이 보는 칸.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Tile {
+    /// 갑판. 걸어갈 수 있어요.
+    Deck,
+    /// 코어가 놓인 칸.
+    Core,
+    /// 로봇 반응로. 코어를 여기 내려놓으면 돼요.
+    Reactor,
+    /// 벽. 못 지나가요.
+    Wall,
+    /// 기압이 정상인 통로. 걸어갈 수 있지만 진공이 되면 휩쓸려요.
+    Duct,
+    /// 허공 (진공이 된 통로도). 못 들어가요.
+    Void,
+    /// 경비 드론이 있는 칸.
+    Sentry,
+    /// 빈 슬롯. 모듈을 설치할 수 있어요.
+    Slot,
+    /// 모듈을 설치한 슬롯. 충전해야 켜져요.
+    Module,
+    /// 충전해서 부팅 중인 모듈. 몇 틱 기다리면 코어가 생겨요.
+    Booting,
+    /// 잠긴 문. 같은 색 키카드가 있어야 열려요.
+    Door(Hue),
+    /// 바닥에 놓인 키카드. 밟으면 저절로 주워요.
+    Card(Hue),
+    /// 충전 패드. 위에 서 있으면 에너지가 가득 차요. (새로!)
+    Pad,
+}
+
+/// 키카드와 문의 색.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Hue {
+    Red,
+    Blue,
+}
+
+impl Tile {
+    /// 지금 걸어 들어갈 수 있는 칸인가요?
+    pub fn is_open(self) -> bool {
+        matches!(self, Tile::Deck | Tile::Core | Tile::Reactor | Tile::Duct | Tile::Slot | Tile::Module | Tile::Booting | Tile::Card(_) | Tile::Pad)
+    }
+}
+
+/// 멀리 볼 때 실패하는 까닭.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SightError {
+    /// 지도 밖이에요.
+    OffMap,
+    /// 너무 멀어요. 가까이 가면 보여요.
+    TooFar,
+}
+
+/// 기압. 변형마다 숫자를 하나씩 품고 있어요.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Pressure {
+    /// 기압이 정상이에요. `turns_left` 틱 뒤에 진공이 돼요.
+    Safe { turns_left: u32 },
+    /// 진공이에요. `turns_left` 틱 뒤에 기압이 돌아와요.
+    Vacuum { turns_left: u32 },
+    /// 기압 변화가 없는 구역.
+    Stable,
+}
+
+/// 로봇이 한 틱에 보는 것. `tick` 이 `&View` 로 빌려 받아요.
+pub struct View {
+    /// 게임 엔진이 채워 줘요.
+    pub(crate) inner: crate::engine::world::View,
+}
+
+impl View {
+    /// 지금 몇 번째 틱인지 (0부터).
+    pub fn tick(&self) -> u32 {
+        self.inner.tick()
+    }
+
+    /// 이 로봇의 번호 (0부터).
+    pub fn id(&self) -> usize {
+        self.inner.id()
+    }
+
+    /// 발밑 칸.
+    pub fn here(&self) -> Tile {
+        self.inner.here().into()
+    }
+
+    /// 코어를 들고 있나요?
+    pub fn carrying(&self) -> bool {
+        self.inner.carrying()
+    }
+
+    /// 가장 가까운 코어로 가는 첫걸음. 탐지 범위 밖이면 `None`.
+    pub fn core_dir(&self) -> Option<Dir> {
+        self.inner.core_dir().map(Into::into)
+    }
+
+    /// 반응로로 가는 첫걸음. 이미 반응로 위라면 `None`.
+    pub fn reactor_dir(&self) -> Option<Dir> {
+        self.inner.reactor_dir().map(Into::into)
+    }
+
+    /// 지금 서 있는 곳 `(x, y)`. 왼쪽 위가 `(0, 0)` 이고, 동쪽으로 갈수록 `x`, 남쪽으로 갈수록 `y` 가 커져요.
+    pub fn pos(&self) -> (i32, i32) {
+        self.inner.pos()
+    }
+
+    /// 바닥에 놓인 코어 전부의 위치 목록. 가까운 순서가 아니에요.
+    pub fn cores(&self) -> Vec<(i32, i32)> {
+        self.inner.ripe()
+    }
+
+    /// 볼 수 있는 거리 (걸어서 몇 걸음). 
+    pub fn sight(&self) -> i32 {
+        self.inner.sight()
+    }
+
+    /// 지도 크기 `(가로, 세로)`.
+    pub fn size(&self) -> (i32, i32) {
+        self.inner.size()
+    }
+
+    /// 아무 칸이나 들여다봐요. 지도 밖이거나 너무 멀면 `Err` 예요. 시야는 `view.sight()` 걸음.
+    pub fn tile_at(&self, x: i32, y: i32) -> Result<Tile, SightError> {
+        self.inner.tile_at(x, y).map(Into::into).map_err(Into::into)
+    }
+
+    /// 남은 에너지. 한 걸음 걸을 때마다 1 줄어요. 0 이면 못 걸어요. (새로!)
+    pub fn energy(&self) -> u32 {
+        self.inner.energy()
+    }
+
+    /// 충전 패드들의 위치. (새로!)
+    pub fn pads(&self) -> Vec<(i32, i32)> {
+        self.inner.pads()
+    }
+
+    /// 반응로 위치. 반응로 위에서도 에너지가 가득 차요. (새로!)
+    pub fn reactor(&self) -> (i32, i32) {
+        self.inner.reactor()
+    }
+
+    /// 작전 지시문. 레벨마다 정해진 글이에요.
+    pub fn briefing(&self) -> &str {
+        self.inner.briefing()
+    }
+
+    /// 가진 키카드 목록.
+    pub fn keys(&self) -> Vec<Hue> {
+        self.inner.keys().into_iter().map(Into::into).collect()
+    }
+
+    /// 가장 가까운 키카드로 가는 첫걸음. 갈 수 있는 카드가 없으면 `None`.
+    pub fn card_dir(&self) -> Option<Dir> {
+        self.inner.card_dir().map(Into::into)
+    }
+
+    /// 가진 키카드로 열 수 있는 가장 가까운 문으로 가는 첫걸음. 없으면 `None`.
+    pub fn door_dir(&self) -> Option<Dir> {
+        self.inner.door_dir().map(Into::into)
+    }
+
+    /// 레이더가 보내는 글. 코어마다 `C:x,y` 를 공백으로 이어 붙인 것인데, 가끔 알아볼 수 없는 조각이 섞여요.
+    /// 돌려주는 `&str` 는 이 `View` 에서 빌린 것이라서, `View` 보다 오래 둘 수 없어요.
+    pub fn radar(&self) -> &str {
+        self.inner.radar()
+    }
+
+    /// 손이 필요한 슬롯(빈 슬롯이나 충전 안 한 모듈)으로 가는 첫걸음. 없으면 `None`.
+    pub fn slot_dir(&self) -> Option<Dir> {
+        self.inner.slot_dir().map(Into::into)
+    }
+
+    /// 그쪽 바로 옆 칸.
+    pub fn look(&self, dir: Dir) -> Tile {
+        self.inner.look(dir.into()).into()
+    }
+
+    /// 지금 기압.
+    pub fn pressure(&self) -> Pressure {
+        self.inner.pressure().into()
+    }
+
+    /// 그쪽으로 한 칸 가면 다음 틱에 경비 드론에게 잡히나요?
+    pub fn danger(&self, dir: Dir) -> bool {
+        self.inner.danger(dir.into())
+    }
+
+    /// 지금까지 반응로에 배달한 코어 수 (로봇 모두 합쳐서).
+    pub fn delivered(&self) -> u32 {
+        self.inner.delivered()
+    }
+
+    /// 목표 배달 수.
+    pub fn goal(&self) -> u32 {
+        self.inner.goal()
+    }
+}
