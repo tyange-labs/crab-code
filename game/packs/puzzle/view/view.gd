@@ -10,6 +10,8 @@
 ##   agent_count()          행위자 수
 ##   describe_agent(i, t)   t 의 i 번 행위자를 한 줄로 (살펴보기 창에 쓴다)
 ##   signal agent_selected  행위자를 눌렀을 때
+##
+## 그림은 assets/sheet.png (../art/sprites.py 가 만든다). 16픽셀 격자에 그린 뒤 정수 배율로 키운다.
 extends Control
 
 signal agent_selected(index: int)
@@ -18,6 +20,9 @@ const DX := [1, 0, -1, 0]
 const DY := [0, 1, 0, -1]
 const DIR_NAME := ["동", "남", "서", "북"]
 const RING := {"collect": Color("#f2c94c"), "deposit": Color("#5fd38d"), "polish": Color.WHITE, "unlock": Color("#5cb8ff")}
+const T := 16
+# sheet.png 안의 순서
+enum Sprite { FLOOR0, FLOOR1, GEM_RED, GEM_BLUE, GEM_DULL, PED, PED_RED, PED_BLUE, DOOR, DOOR_OPEN, FLAG0, FLAG1, SIGN_LEFT, SIGN_RIGHT, NUMBER, CRAB0, CRAB1 }
 
 var map: Dictionary = {}
 var frames: Array = []
@@ -27,13 +32,16 @@ var selected := 0
 var _clock := 0.0
 var _shake := 0.0
 var _particles: Array = []
-var _tile := 1.0
+var _tile := 1.0 # 화면에서 한 칸의 크기 (= T * _scale)
+var _scale := 1
 var _origin := Vector2.ZERO
+var _sheet: Texture2D = load("res://packs/puzzle/view/assets/sheet.png")
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clip_contents = true
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
 func setup(new_map: Dictionary, new_frames: Array) -> void:
@@ -148,9 +156,11 @@ func _layout(w: Dictionary) -> void:
 				hi = Vector2i(maxi(hi.x, x), maxi(hi.y, y))
 	var cols := hi.x - lo.x + 1
 	var rows := hi.y - lo.y + 1
-	var top := 40.0
-	_tile = minf(minf((size.x - 24.0) / cols, (size.y - top - 16.0) / rows), 92.0)
-	_origin = Vector2((size.x - _tile * cols) / 2.0 - lo.x * _tile, top + (size.y - top - _tile * rows) / 2.0 - lo.y * _tile)
+	# 위쪽 정보 줄은 지도 모서리 위에 겹쳐 그린다 (그래야 정수 배율을 한 단계 크게 쓸 수 있다).
+	var top := 8.0
+	_scale = maxi(1, int(floor(minf((size.x - 24.0) / (cols * T), (size.y - top - 8.0) / (rows * T)))))
+	_tile = T * _scale
+	_origin = Vector2(floor((size.x - _tile * cols) / 2.0 - lo.x * _tile), floor(top + (size.y - top - _tile * rows) / 2.0 - lo.y * _tile))
 
 
 func _cell_center(cell: Vector2) -> Vector2:
@@ -171,13 +181,13 @@ func _label(text: String, c: Vector2, font_size: float, color: Color, font: Font
 	var fs := maxi(int(font_size), 1)
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var baseline := c.y + (font.get_ascent(fs) - font.get_descent(fs)) / 2.0
-	draw_string(font, Vector2(c.x - w / 2.0, baseline), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, color)
+	draw_string(font, Vector2(round(c.x - w / 2.0), round(baseline)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, color)
 
 
 # ── 그리기 ───────────────────────────────────────────────────────
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#1d2031"))
+	draw_rect(Rect2(Vector2.ZERO, size), Color("#141625"))
 	if frames.is_empty() or size.x < 60.0 or size.y < 60.0:
 		return
 	var k := int(floor(time))
@@ -190,108 +200,114 @@ func _draw() -> void:
 	_layout(a.world)
 	if _tile < 6.0:
 		return
-	var tile := _tile
-	var shake := Vector2(sin(_clock * 90.0), cos(_clock * 77.0)) * _shake * tile * 0.06
+	var shake := (Vector2(sin(_clock * 90.0), cos(_clock * 77.0)) * _shake * 2.0).round() * _scale
 	draw_set_transform(shake)
 
 	for y in w.h:
 		for x in w.w:
 			if not _is_wall(w, x, y):
-				_rect(_cell_center(Vector2(x, y)), tile / 2.0 - 2.0, tile * 0.14, Color("#363b58") if (x + y) % 2 == 0 else Color("#323651"))
+				_sprite(Sprite.FLOOR0 + (x + y) % 2, Vector2(x, y) * T)
 
+	var digits := Palette.pixel_font(true)
+	var fs := Palette.PIXEL_SIZE * maxi(1, _scale / 2)
 	for n in w.numbers:
-		var c := _cell_center(Vector2(n.x, n.y))
-		_rect(c, tile * 0.3, tile * 0.1, Color("#27405e"))
-		_label(str(n.n), c, tile * 0.4, Palette.SKY, Palette.code_font())
+		_sprite(Sprite.NUMBER, Vector2(n.x, n.y) * T)
+		_label(str(n.n), _cell_center(Vector2(n.x, n.y)), fs, Palette.SKY, digits)
 
 	for s in w.signs:
-		if s.sign != "left" and s.sign != "right":
-			continue
-		var c := _cell_center(Vector2(s.x, s.y))
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Palette.WARN
-		sb.set_corner_radius_all(int(tile * 0.08))
-		draw_style_box(sb, Rect2(c - Vector2(tile * 0.4, tile * 0.2), Vector2(tile * 0.8, tile * 0.4)))
-		_label("왼쪽" if s.sign == "left" else "오른쪽", c, tile * 0.23, Color("#3a2c00"))
+		if s.sign == "left":
+			_sprite(Sprite.SIGN_LEFT, Vector2(s.x, s.y) * T)
+		elif s.sign == "right":
+			_sprite(Sprite.SIGN_RIGHT, Vector2(s.x, s.y) * T)
 
 	if w.flag != null:
-		var fc := _cell_center(Vector2(w.flag.x, w.flag.y))
-		var px := fc.x - tile * 0.16
-		draw_line(Vector2(px, fc.y - tile * 0.32), Vector2(px, fc.y + tile * 0.32), Palette.TEXT, tile * 0.05, true)
-		var wave := sin(_clock * 4.0) * tile * 0.03
-		draw_colored_polygon(PackedVector2Array([
-			Vector2(px, fc.y - tile * 0.32), Vector2(px + tile * 0.4, fc.y - tile * 0.17 + wave), Vector2(px, fc.y - tile * 0.02),
-		]), Palette.GREEN)
+		_sprite(Sprite.FLAG0 + int(_clock * 3.0) % 2, Vector2(w.flag.x, w.flag.y) * T)
 
 	for p in w.pedestals:
-		var c := _cell_center(Vector2(p.x, p.y))
-		var ring: Color = Palette.GEM[p.want] if p.want != null else Color("#c9cde0")
-		_rect(c, tile * 0.36, tile * 0.12, ring.lerp(Color.BLACK, 0.2))
-		_rect(c, tile * 0.29, tile * 0.09, Color("#23263a"))
+		var kind := Sprite.PED
+		if p.want == "red":
+			kind = Sprite.PED_RED
+		elif p.want == "blue":
+			kind = Sprite.PED_BLUE
+		_sprite(kind, Vector2(p.x, p.y) * T)
 
 	if w.door != null:
-		var d := _cell_center(Vector2(w.door.x, w.door.y))
-		if w.door.open:
-			draw_rect(Rect2(d - Vector2(tile * 0.38, tile * 0.38), Vector2(tile * 0.76, tile * 0.76)), Color("#8a5a2b"), false, tile * 0.07)
-		else:
-			_rect(d, tile * 0.42, tile * 0.1, Color("#8a5a2b"))
-			_rect(d, tile * 0.34, tile * 0.07, Color("#a9713a"))
-			draw_circle(d + Vector2(0, -tile * 0.04), tile * 0.11, Palette.WARN, true, -1.0, true)
-			draw_rect(Rect2(d + Vector2(-tile * 0.03, 0), Vector2(tile * 0.06, tile * 0.16)), Palette.WARN)
+		_sprite(Sprite.DOOR_OPEN if w.door.open else Sprite.DOOR, Vector2(w.door.x, w.door.y) * T)
 
 	for g in w.gems:
 		if g.held:
 			continue
-		var bob := 0.0 if g.placed else sin(_clock * 2.6 + g.x) * tile * 0.03
-		var c := _cell_center(Vector2(g.x, g.y)) + Vector2(0, bob)
-		CrabArt.draw_gem(self, c, tile * 0.24, g)
+		var bob: float = 0.0 if g.placed else roundf(sin(_clock * 2.6 + g.x))
+		_sprite(_gem_sprite(g), Vector2(g.x, g.y) * T + Vector2(0, bob))
 		if w.showWeights:
-			_label(str(g.weight), c + Vector2(0, tile * 0.01), tile * 0.2, Color("#1a1a22"), Palette.code_font())
+			_label(str(g.weight), _cell_center(Vector2(g.x, g.y)) + Vector2(0, bob * _scale), fs, Color("#1a1a22"), digits)
 
 	_draw_crab(a, b, f, moving)
 
 	for p in _particles:
 		var lk := clampf(p.life, 0.0, 1.0)
-		draw_circle(p.pos, p.size * (0.6 + lk), Color(p.color, lk), true, -1.0, true)
+		var px := float(_scale) * (2.0 if p.size > _tile * 0.06 else 1.0)
+		draw_rect(Rect2(p.pos.round(), Vector2(px, px)), Color(p.color, lk))
 	draw_set_transform(Vector2.ZERO)
 	_draw_hud(w, k if not moving or f < 0.5 else k + 1)
 
 
+func _gem_sprite(g: Dictionary) -> int:
+	if not g.shiny:
+		return Sprite.GEM_DULL
+	return Sprite.GEM_RED if g.color == "red" else Sprite.GEM_BLUE
+
+
+## 시트의 그림 하나를 그림 픽셀 좌표(지도 왼쪽 위 기준)에 그린다. quarter 만큼 90도씩 돌린다.
+func _sprite(index: int, art_px: Vector2, quarter := 0, color := Color.WHITE) -> void:
+	var size_px := Vector2(T, T) * _scale
+	var pos := _origin + art_px.round() * _scale
+	var src := Rect2(index * T, 0, T, T)
+	if quarter == 0:
+		draw_texture_rect_region(_sheet, Rect2(pos, size_px), src, color)
+		return
+	var shake := (Vector2(sin(_clock * 90.0), cos(_clock * 77.0)) * _shake * 2.0).round() * _scale
+	draw_set_transform(pos + size_px / 2.0 + shake, quarter * PI / 2.0)
+	draw_texture_rect_region(_sheet, Rect2(-size_px / 2.0, size_px), src, color)
+	draw_set_transform(shake)
+
+
 func _draw_crab(a: Dictionary, b: Dictionary, f: float, moving: bool) -> void:
-	var tile := _tile
 	var wa: Dictionary = a.world
 	var wb: Dictionary = b.world
-	var pos := Vector2(wa.x, wa.y)
-	var angle: float = wa.dir * PI / 2.0
-	var walk := 0.0
-	var hop := 0.0
+	var cell := Vector2(wa.x, wa.y)
+	var dir: int = wa.dir
+	var walk := 0
 	var e := f * f * (3.0 - 2.0 * f)
 	if moving and not b.bump:
-		pos = pos.lerp(Vector2(wb.x, wb.y), e)
-		var delta: int = ((wb.dir - wa.dir + 6) % 4) - 2
-		angle = (wa.dir + delta * e) * PI / 2.0
+		cell = cell.lerp(Vector2(wb.x, wb.y), e)
+		# 도는 동안 반쯤 지나면 새 방향으로 (픽셀 그림은 90도씩만 돌린다)
+		if f >= 0.5:
+			dir = wb.dir
 		if b.action == "forward":
-			walk = f
-			hop = sin(f * PI) * 0.06
-	elif moving and b.bump and b.action == "forward":
-		pos += Vector2(DX[wa.dir], DY[wa.dir]) * sin(PI * f) * 0.22
-	var c := _cell_center(pos) - Vector2(0, hop * tile)
-	draw_set_transform(c + Vector2(0, tile * 0.3), 0.0, Vector2(1.0, 0.35))
-	draw_circle(Vector2.ZERO, tile * 0.3, Color(0, 0, 0, 0.25), true, -1.0, true)
-	draw_set_transform(Vector2(sin(_clock * 90.0), cos(_clock * 77.0)) * _shake * tile * 0.06)
-	CrabArt.draw_crab(self, c, tile, angle, walk, 0.0)
+			walk = 1 if f >= 0.5 else 0
+	var art := cell * T
+	if moving and b.bump and b.action == "forward":
+		art += Vector2(DX[wa.dir], DY[wa.dir]) * round(sin(PI * f) * 4.0)
+	if moving and b.action == "forward" and not b.bump:
+		art.y -= round(sin(f * PI) * 1.0)
+	# 그림은 집게가 북쪽을 본다. dir: 0 동, 1 남, 2 서, 3 북
+	var quarter := (dir + 1) % 4
+	draw_rect(Rect2(_origin + (art + Vector2(3, 13)).round() * _scale, Vector2(10, 2) * _scale), Color(0, 0, 0, 0.3))
+	_sprite(Sprite.CRAB0 + walk, art, quarter)
 	if moving and RING.has(b.action) and not b.bump:
-		draw_arc(c, tile * (0.3 + 0.35 * f), 0.0, TAU, 40, Color(RING[b.action], 1.0 - f), tile * 0.05, true)
+		var c := _cell_center(cell)
+		draw_arc(c, _tile * (0.3 + 0.35 * f), 0.0, TAU, 32, Color(RING[b.action], 1.0 - f), float(_scale), false)
 	elif not moving:
 		# 꽃게가 받침대 위에 서 있으면 올려 둔 보석이 가려지므로 위에 다시 그린다.
 		for g in wa.gems:
 			if g.placed and g.x == wa.x and g.y == wa.y:
-				CrabArt.draw_gem(self, c - Vector2(0, tile * 0.3), tile * 0.17, g)
+				_sprite(_gem_sprite(g), art + Vector2(0, -8))
 
 
 ## 위쪽 정보 줄: 행동 수, 가방, 다이얼·두루마리·쪽지.
 func _draw_hud(w: Dictionary, step: int) -> void:
-	var font := Palette.text_font()
+	var font := Palette.pixel_font()
 	var x := 12.0
 	x = _chip(x, "행동 %d / %d" % [step, last_tick()], Palette.TEXT, font)
 	var held: Array = w.gems.filter(func(g): return g.held)
@@ -301,7 +317,7 @@ func _draw_hud(w: Dictionary, step: int) -> void:
 	if held.is_empty():
 		_text(x + 42, "-", Palette.FAINT, font)
 	for i in held.size():
-		CrabArt.draw_gem(self, Vector2(x + 50 + i * 18.0, 20), 7.0, held[i])
+		draw_texture_rect_region(_sheet, Rect2(x + 40 + i * 18.0, 12, 16, 16), Rect2(_gem_sprite(held[i]) * T, 0, T, T))
 	x += bag_w + 6.0
 	if w.dial != null:
 		x = _chip(x, "다이얼 %d" % w.dial, Palette.CODE, font)
@@ -314,18 +330,17 @@ func _draw_hud(w: Dictionary, step: int) -> void:
 
 
 func _chip_box(x: float, w: float) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0, 0, 0, 0.3)
-	sb.set_corner_radius_all(12)
-	draw_style_box(sb, Rect2(x, 8, w, 24))
+	draw_rect(Rect2(x, 8, w, 24), Color(0.02, 0.03, 0.06, 0.75))
+	draw_rect(Rect2(x, 8, w, 24), Color(1, 1, 1, 0.12), false, 2.0)
 
 
 func _text(x: float, text: String, color: Color, font: Font) -> void:
-	draw_string(font, Vector2(x, 8 + 12 + (font.get_ascent(13) - font.get_descent(13)) / 2.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, color)
+	var fs := Palette.PIXEL_SIZE
+	draw_string(font, Vector2(x, round(8 + 12 + (font.get_ascent(fs) - font.get_descent(fs)) / 2.0)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, color)
 
 
 func _chip(x: float, text: String, color: Color, font: Font) -> float:
-	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 20.0
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, Palette.PIXEL_SIZE).x + 20.0
 	_chip_box(x, w)
 	_text(x + 10, text, color, font)
 	return x + w + 6.0

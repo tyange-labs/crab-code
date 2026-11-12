@@ -30,8 +30,21 @@ fn write_if_changed(path: &Path, content: &str) -> std::io::Result<()> {
     std::fs::write(path, content)
 }
 
+/// from 을 to 에 똑같이 맞춘다: 바뀐 파일은 덮어쓰고, from 에 없는 파일은 지운다 (target 은 건드리지 않는다).
 fn copy_dir(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(to)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        if name == "target" || from.join(&name).exists() {
+            continue;
+        }
+        if entry.path().is_dir() {
+            std::fs::remove_dir_all(entry.path())?;
+        } else {
+            std::fs::remove_file(entry.path())?;
+        }
+    }
     for entry in std::fs::read_dir(from)? {
         let entry = entry?;
         let name = entry.file_name();
@@ -63,6 +76,34 @@ Crab Code 게임이 만든 cargo 워크스페이스예요. 이 폴더를 좋아�
 ";
 
 const VSCODE_EXTENSIONS: &str = "{\n  \"recommendations\": [\"rust-lang.rust-analyzer\"]\n}\n";
+
+/// 작업 폴더가 게임팩마다 어느 API 버전으로 만들어졌는지 (.crab/packs.json).
+fn applied_path(root: &Path) -> PathBuf {
+    root.join(".crab").join("packs.json")
+}
+
+fn applied_api(root: &Path, pack_id: &str) -> Option<u64> {
+    let v: Value = serde_json::from_str(&std::fs::read_to_string(applied_path(root)).ok()?).ok()?;
+    v[pack_id]["api"].as_u64()
+}
+
+fn save_applied_api(root: &Path, pack_id: &str, api: u64) -> std::io::Result<()> {
+    let mut v: Value = std::fs::read_to_string(applied_path(root))
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| json!({}));
+    v[pack_id] = json!({ "api": api });
+    write_if_changed(&applied_path(root), &serde_json::to_string_pretty(&v).unwrap_or_default())
+}
+
+/// 비어 있는 보관 폴더 이름: levels-v1, (이미 있으면) levels-v1-2 …
+fn archive_dir(pack_dir: &Path, old_api: u64) -> PathBuf {
+    let base = pack_dir.join(format!("levels-v{old_api}"));
+    if !base.exists() {
+        return base;
+    }
+    (2..).map(|n| pack_dir.join(format!("levels-v{old_api}-{n}"))).find(|p| !p.exists()).unwrap()
+}
 
 pub fn pack_crate_dir(root: &Path, pack: &Pack) -> PathBuf {
     root.join(".crab").join("packs").join(&pack.id)
@@ -104,6 +145,31 @@ pub fn ensure(root: &Path, pack: &Pack, identity: Option<(&str, &str)>) -> Resul
     let err = |e: std::io::Error| format!("작업 폴더({})를 준비하지 못했어요: {e}", root.display());
     let fresh = !root.join(".git").exists();
     std::fs::create_dir_all(root).map_err(err)?;
+    let use_git = git::available();
+    if use_git && fresh {
+        git::init(root)?;
+    }
+    if use_git {
+        git::configure_local(root, identity)?;
+    }
+
+    // 게임팩의 API 가 바뀌었으면 (예: prelude → 레벨마다의 모듈) 예전 레벨 파일은 새 크레이트와 맞지 않는다.
+    // 지금 상태를 커밋해 두고, 예전 파일은 levels-v<예전 버전>/ 으로 옮겨 보관한 뒤 새 처음 코드로 시작한다.
+    let api = pack.meta["api"].as_u64().unwrap_or(1);
+    let pack_dir = root.join(pack.id.as_str());
+    let levels_dir = pack_dir.join("levels");
+    let mut migrated: Option<String> = None;
+    if levels_dir.exists() {
+        let old = applied_api(root, &pack.id).unwrap_or(1);
+        if old != api {
+            if use_git {
+                git::commit_all(root, &format!("{}: 게임팩 업데이트 전 저장", pack.name()))?;
+            }
+            let archive = archive_dir(&pack_dir, old);
+            std::fs::rename(&levels_dir, &archive).map_err(err)?;
+            migrated = Some(archive.strip_prefix(root).unwrap_or(&archive).to_string_lossy().to_string());
+        }
+    }
     copy_dir(&pack.dir.join("crate"), &pack_crate_dir(root, pack)).map_err(err)?;
     write_if_changed(&root.join(pack.id.as_str()).join("Cargo.toml"), &play_manifest(pack)).map_err(err)?;
     let mut created = Vec::new();
@@ -124,16 +190,15 @@ pub fn ensure(root: &Path, pack: &Pack, identity: Option<(&str, &str)>) -> Resul
     if !root.join(".vscode/extensions.json").exists() {
         write_if_changed(&root.join(".vscode/extensions.json"), VSCODE_EXTENSIONS).map_err(err)?;
     }
+    save_applied_api(root, &pack.id, api).map_err(err)?;
     let mut note = String::new();
-    if git::available() {
-        if fresh {
-            git::init(root)?;
-        }
-        git::configure_local(root, identity)?;
+    if use_git {
         if fresh {
             git::commit_all(root, "Crab Code 작업 폴더를 만들었어요")?;
+        } else if let Some(archive) = &migrated {
+            git::commit_all(root, &format!("{}: 게임팩 업데이트 — 예전 레벨 파일은 {archive}/ 에 보관", pack.name()))?;
         } else if !created.is_empty() {
-            git::commit_paths(root, &[pack.id.as_str()], &format!("{}: 새 레벨 {}개", pack.name(), created.len()))?;
+            git::commit_paths(root, &[pack.id.as_str(), ".crab/packs.json"], &format!("{}: 새 레벨 {}개", pack.name(), created.len()))?;
         }
     } else {
         note = "git 이 없어서 기록을 커밋하지 못해요. git 을 설치하면 클리어할 때마다 풀이가 남아요.".into();
@@ -143,7 +208,7 @@ pub fn ensure(root: &Path, pack: &Pack, identity: Option<(&str, &str)>) -> Resul
         .iter()
         .map(|l| (l.id.clone(), json!(root.join(pack.level_file(l)).to_string_lossy())))
         .collect();
-    Ok(json!({ "ok": true, "root": root.to_string_lossy(), "files": files, "note": note, "fresh": fresh }))
+    Ok(json!({ "ok": true, "root": root.to_string_lossy(), "files": files, "note": note, "fresh": fresh, "migrated": migrated }))
 }
 
 /// 레벨 파일을 처음 코드로 되돌린다. 지금 코드는 먼저 커밋해 둔다 (git 으로 언제든 되찾을 수 있게).

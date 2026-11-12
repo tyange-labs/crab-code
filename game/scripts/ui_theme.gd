@@ -2,10 +2,11 @@
 class_name UiTheme
 
 
+## 픽셀 아트에 어울리게 모서리는 거의 각지게 (radius 는 넘겨받은 값의 절반, 최대 4).
 static func box(color: Color, radius := 8, pad_x := 0.0, pad_y := 0.0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = color
-	s.set_corner_radius_all(radius)
+	s.set_corner_radius_all(mini(radius / 2, 4))
 	s.content_margin_left = pad_x
 	s.content_margin_right = pad_x
 	s.content_margin_top = pad_y
@@ -14,14 +15,31 @@ static func box(color: Color, radius := 8, pad_x := 0.0, pad_y := 0.0) -> StyleB
 	return s
 
 
+static func _pressable(color: Color) -> StyleBoxFlat:
+	var s := box(color, 8, 16, 8)
+	s.border_width_bottom = 3
+	s.border_color = color.darkened(0.35)
+	return s
+
+
 static func build() -> Theme:
 	var t := Theme.new()
 	t.default_font = Palette.text_font()
 	t.default_font_size = 15
+	# 버튼·칩·제목은 픽셀 폰트, 긴 글(레슨 본문·출력)은 읽기 편한 글꼴
+	t.set_font("font", "Button", Palette.pixel_font())
+	t.set_font_size("font_size", "Button", Palette.PIXEL_SIZE)
+	t.set_font("font", "OptionButton", Palette.pixel_font())
+	t.set_font_size("font_size", "OptionButton", Palette.PIXEL_SIZE)
+	t.set_font("font", "PopupMenu", Palette.pixel_font())
+	t.set_font_size("font_size", "PopupMenu", Palette.PIXEL_SIZE)
+	t.set_type_variation("PixelTitle", "Label")
+	t.set_font("font", "PixelTitle", Palette.pixel_font(true))
+	t.set_font_size("font_size", "PixelTitle", Palette.PIXEL_SIZE * 2)
 
-	# 버튼
-	t.set_stylebox("normal", "Button", box(Palette.PANEL_HI, 8, 16, 8))
-	t.set_stylebox("hover", "Button", box(Palette.PANEL_HI.lightened(0.12), 8, 16, 8))
+	# 버튼 (아래쪽에 2px 그림자 테두리를 둬서 눌리는 느낌)
+	t.set_stylebox("normal", "Button", _pressable(Palette.PANEL_HI))
+	t.set_stylebox("hover", "Button", _pressable(Palette.PANEL_HI.lightened(0.12)))
 	t.set_stylebox("pressed", "Button", box(Palette.PANEL_HI.darkened(0.15), 8, 16, 8))
 	t.set_stylebox("disabled", "Button", box(Palette.PANEL_HI.darkened(0.2), 8, 16, 8))
 	t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
@@ -33,8 +51,8 @@ static func build() -> Theme:
 
 	# 실행 버튼
 	t.set_type_variation("PrimaryButton", "Button")
-	t.set_stylebox("normal", "PrimaryButton", box(Palette.ACCENT, 8, 16, 8))
-	t.set_stylebox("hover", "PrimaryButton", box(Palette.ACCENT.lightened(0.12), 8, 16, 8))
+	t.set_stylebox("normal", "PrimaryButton", _pressable(Palette.ACCENT))
+	t.set_stylebox("hover", "PrimaryButton", _pressable(Palette.ACCENT.lightened(0.12)))
 	t.set_stylebox("pressed", "PrimaryButton", box(Palette.ACCENT.darkened(0.15), 8, 16, 8))
 	t.set_stylebox("disabled", "PrimaryButton", box(Palette.ACCENT.darkened(0.35), 8, 16, 8))
 	t.set_color("font_color", "PrimaryButton", Color.WHITE)
@@ -49,7 +67,7 @@ static func build() -> Theme:
 		t.set_color("font_color", kind, fg)
 		t.set_color("font_hover_color", kind, fg)
 		t.set_color("font_pressed_color", kind, fg)
-		t.set_font_size("font_size", kind, 13)
+		t.set_font_size("font_size", kind, Palette.PIXEL_SIZE)
 	chip.call("Chip", Palette.PANEL_HI, Palette.DIM)
 	chip.call("ChipCurrent", Palette.ACCENT, Color.WHITE)
 	chip.call("ChipDone", Palette.GREEN_BG, Palette.GREEN)

@@ -71,7 +71,7 @@ cargo run -p crab-host --example run_level -- <작업 폴더> <팩> <레벨>    
 
 ```
 game/packs/<id>/
-  pack.json        {"id", "name", "crate", "tagline", "agent": "꽃게", "tick": "틱", "colors": [...], "chapters"?: [...]}
+  pack.json        {"id", "name", "crate", "api", "tagline", "agent": "꽃게", "tick": "틱", "colors": [...], "chapters"?: [...]}
   crate/           플레이어 코드가 의존하는 Rust 크레이트 (std 만 — 인터넷 없이 빌드되도록)
     src/lib.rs     플레이어용 API 와 세계 규칙
     src/bin/preview.rs   `preview <레벨> <시드>`: 레벨의 처음 모습만 출력 (코드가 컴파일되지 않을 때 보여 준다)
@@ -90,6 +90,10 @@ game/packs/<id>/
 rustc 가 "그런 변형/메서드는 없다" 고 알려 준다. 세계 시뮬레이션은 숨은 `engine` 모듈에 있고, `engine/bridge.rs` 가
 레벨 타입과 엔진 타입을 서로 바꾼다.
 
+**API 를 바꾸면 `pack.json` 의 `api` 를 올린다.** 작업 폴더는 게임팩마다 어느 `api` 로 만들어졌는지
+`.crab/packs.json` 에 적어 두고, 버전이 바뀌면 지금 상태를 커밋한 뒤 예전 레벨 파일을 `<팩>/levels-v<예전 버전>/` 으로
+옮겨 보관하고 새 처음 코드로 시작한다 (예전 파일은 새 크레이트와 맞지 않으므로).
+
 플레이어 프로그램은 표준 출력으로 한 줄에 하나씩 `"\u{1}crab " + JSON` 을 보낸다 (머리글 없는 줄은 플레이어의 `println!`):
 
 | `t` | 내용 |
@@ -105,6 +109,17 @@ rustc 가 "그런 변형/메서드는 없다" 고 알려 준다. 세계 시뮬�
 `selected`, `last_tick()`, `frame_at(t)`, `play_effects(t)`, `celebrate()`, `agent_count()`,
 `describe_agent(i, t)`, `signal agent_selected(i)`. 두 팩의 `view.gd` 가 예시다.
 
+## 그림
+
+게임 화면은 16x16 픽셀 아트다. 16픽셀 격자에 그린 뒤 정수 배율로 키워서 픽셀이 뭉개지지 않게 한다.
+
+- 지형·꽃게·갈매기·먹이·보석 등은 게임팩마다 `art/sprites.py` 의 **글자 격자** 로 그려져 있다 (글자 하나 = 픽셀 하나).
+  격자를 고치고 실행하면 `view/assets/` 의 PNG 가 다시 만들어진다: `python3 game/packs/tidepool/art/sprites.py`
+- 반짝이·물방울·느낌표·모래시계 같은 아이콘은 Kenney 의 1-Bit Pack 에서 가져왔다.
+- 제목·버튼·HUD 는 픽셀 폰트(갈무리11), 긴 글(레슨 본문·출력)은 읽기 편한 Pretendard 와 JetBrains Mono.
+
 ## 함께 들어 있는 것
 
 - [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), [Pretendard](https://github.com/orioncactus/pretendard) — SIL Open Font License 1.1 (`game/fonts/`)
+- [갈무리 Galmuri](https://github.com/quiple/galmuri) — SIL Open Font License 1.1 (`game/fonts/Galmuri-LICENSE.txt`)
+- [Kenney 1-Bit Pack](https://kenney.nl/assets/1-bit-pack) — CC0 (`game/packs/tidepool/view/assets/kenney/`)

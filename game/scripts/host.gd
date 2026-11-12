@@ -119,18 +119,21 @@ func _ready() -> void:
 
 
 func _style_static_nodes() -> void:
-	%BrandName.add_theme_font_size_override("font_size", 21)
+	%BrandName.theme_type_variation = "PixelTitle"
+	%LessonTitle.theme_type_variation = "PixelTitle"
+	for l in [%Progress, %ChapterName, %FileTitle, %ConsoleLabel, %TickLabel]:
+		l.add_theme_font_override("font", Palette.pixel_font())
 	%BrandSub.add_theme_color_override("font_color", Palette.DIM)
 	%BrandSub.add_theme_font_size_override("font_size", 12)
 	%ChapterName.add_theme_color_override("font_color", Palette.DIM)
-	%ChapterName.add_theme_font_size_override("font_size", 13)
-	%LessonTitle.add_theme_font_size_override("font_size", 21)
+	%ChapterName.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
+
 	%Progress.add_theme_color_override("font_color", Palette.GREEN)
-	%Progress.add_theme_font_size_override("font_size", 13)
+	%Progress.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%BannerText.callouts = false
 	%Run.theme_type_variation = "PrimaryButton"
 	%FileTitle.add_theme_color_override("font_color", Palette.DIM)
-	%FileTitle.add_theme_font_size_override("font_size", 12)
+	%FileTitle.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%FileName.add_theme_font_override("font", Palette.code_font())
 	%FileName.add_theme_font_size_override("font_size", 16)
 	%FileName.add_theme_color_override("font_color", Palette.CODE)
@@ -144,11 +147,10 @@ func _style_static_nodes() -> void:
 	%WorkspacePanel.add_theme_stylebox_override("panel", UiTheme.box(Palette.EDITOR, 12, 16, 14))
 	for b in [%OpenIde, %OpenFolder, %CopyCommand]:
 		b.add_theme_font_size_override("font_size", 13)
-	%TickLabel.add_theme_font_override("font", Palette.code_font())
-	%TickLabel.add_theme_font_size_override("font_size", 13)
+	%TickLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%TickLabel.add_theme_color_override("font_color", Palette.DIM)
 	%ConsoleLabel.add_theme_color_override("font_color", Palette.DIM)
-	%ConsoleLabel.add_theme_font_size_override("font_size", 12)
+	%ConsoleLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%Console.add_theme_font_override("normal_font", Palette.code_font())
 	%Console.add_theme_font_size_override("normal_font_size", 13)
 	%Console.add_theme_constant_override("line_separation", 3)
@@ -303,6 +305,8 @@ func _select_pack(index: int, start_level: int) -> void:
 	files = ws.files
 	if ws.get("note", "") != "":
 		_log(ws.note, "warn")
+	if ws.get("migrated") != null:
+		_log("게임팩이 업데이트되어 레벨 파일을 새 처음 코드로 바꿨어요. 예전 파일은 %s/ 에 보관했고, git 에도 남아 있어요." % ws.migrated, "warn")
 
 	# 게임팩 화면을 바꿔 끼운다.
 	if view:

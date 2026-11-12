@@ -2,6 +2,7 @@
   "id": "puzzle",
   "name": "퍼즐",
   "crate": "puzzle",
+  "api": 2,
   "tagline": "꽃게 페리스를 함수 호출로 움직여요. 『프로그래밍 러스트』 2~17장 순서.",
   "agent": "꽃게",
   "colors": [

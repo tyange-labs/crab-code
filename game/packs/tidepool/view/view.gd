@@ -1,4 +1,4 @@
-## 조수 웅덩이 게임팩의 화면: 웅덩이를 그린다.
+## 조수 웅덩이 게임팩의 화면: 16x16 픽셀 아트로 밤바다 웅덩이를 그린다.
 ##
 ## 게임 본체(host.gd)와의 약속 (모든 게임팩 화면이 같다):
 ##   setup(map, frames)     게임팩 프로그램이 출력한 지도와 틱마다의 모습
@@ -10,19 +10,27 @@
 ##   agent_count()          행위자 수
 ##   describe_agent(i, t)   t 틱의 i 번 행위자를 한 줄로 (살펴보기 창에 쓴다)
 ##   signal agent_selected  행위자를 눌렀을 때
+##
+## 그림은 assets/ 에 있다. 지형·꽃게·갈매기·먹이는 ../art/sprites.py 가 만든 것이고,
+## 반짝이·물방울 같은 아이콘은 Kenney 의 1-Bit Pack (CC0, assets/kenney/) 에서 가져왔다.
+## 모든 것을 16픽셀 격자에 그린 뒤 정수 배율로 키워서 픽셀이 뭉개지지 않게 한다.
 extends Control
 
 ## 꽃게를 눌렀을 때.
 signal agent_selected(index: int)
 
-const CRAB_COLORS := [
-	[Color("#f4511e"), Color("#b93a12")],
-	[Color("#3fb6a8"), Color("#23766d")],
-	[Color("#e2b33c"), Color("#9c7a1c")],
-	[Color("#b07cf0"), Color("#6f45a8")],
-]
-const DIR_ANGLE := {"N": -PI / 2.0, "E": 0.0, "S": PI / 2.0, "W": PI}
+const T := 16 # 그림 한 칸의 픽셀 수
+const ASSETS := "res://packs/tidepool/view/assets/"
+const CRAB_FILES := ["crab_orange", "crab_teal", "crab_yellow", "crab_purple"]
 const DIR_VEC := {"N": Vector2(0, -1), "E": Vector2(1, 0), "S": Vector2(0, 1), "W": Vector2(-1, 0)}
+# tiles.png 안의 순서
+enum Tile { SAND0, SAND1, FLAT0, FLAT1, ROCK0, ROCK1, WATER0, WATER1, FLOOD0, FLOOD1, NEST }
+# Kenney 1-Bit Pack 안의 아이콘 (열, 줄)
+const ICON_BUBBLES := Vector2i(35, 11)
+const ICON_SPARKLE := Vector2i(36, 11)
+const ICON_HOURGLASS := Vector2i(38, 12)
+const ICON_ALERT := Vector2i(36, 13)
+const ICON_CORNERS := Vector2i(35, 12)
 
 var map: Dictionary = {}
 var frames: Array = []
@@ -31,13 +39,20 @@ var selected := 0
 
 var _clock := 0.0
 var _particles: Array = []
-var _tile := 1.0
-var _origin := Vector2.ZERO
+var _scale := 1 # 그림 1픽셀이 화면 몇 픽셀인지 (정수)
+var _origin := Vector2.ZERO # 지도 (0, 0) 칸의 화면 위치
+
+var _tiles: Texture2D = load(ASSETS + "tiles.png")
+var _gull: Texture2D = load(ASSETS + "gull.png")
+var _food: Texture2D = load(ASSETS + "food.png")
+var _icons: Texture2D = load(ASSETS + "kenney/1bit.png")
+var _crabs: Array = CRAB_FILES.map(func(f): return load(ASSETS + f + ".png"))
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clip_contents = true
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
 func setup(new_map: Dictionary, new_frames: Array) -> void:
@@ -71,7 +86,9 @@ func frame_at(t: int) -> Dictionary:
 	return frames[clampi(t, 0, frames.size() - 1)]
 
 
-## 틱 하나를 지나갈 때 효과를 터뜨린다 (재생 중에만 부른다).
+# ── 효과 ─────────────────────────────────────────────────────────
+
+## 재생 중 t 틱에 들어설 때.
 func play_effects(tick: int) -> void:
 	var f := frame_at(tick)
 	if f.is_empty():
@@ -79,58 +96,66 @@ func play_effects(tick: int) -> void:
 	var prev := frame_at(tick - 1)
 	for i in f.crabs.size():
 		var c: Dictionary = f.crabs[i]
-		var at := _cell_center(Vector2(c.x, c.y))
+		var was: Dictionary = prev.crabs[i] if not prev.is_empty() else c
+		var at := Vector2(c.x, c.y)
 		match c.mishap:
 			"swept":
-				var from: Dictionary = prev.crabs[i] if not prev.is_empty() else c
-				_burst(_cell_center(Vector2(from.x, from.y)), Color("#7fc8ff"), 26, 1.6)
+				_icon_float(Vector2(was.x, was.y), ICON_BUBBLES, Color("#8fd0ff"))
+				_burst(Vector2(was.x, was.y), Color("#6ca8d8"), 14)
 				Sfx.play("bump", 0.7)
 			"caught":
-				var from: Dictionary = prev.crabs[i] if not prev.is_empty() else c
-				_burst(_cell_center(Vector2(from.x, from.y)), Color.WHITE, 22, 1.2)
+				_icon_float(Vector2(was.x, was.y), ICON_ALERT, Color("#ffffff"))
+				_icon_float(at, ICON_HOURGLASS, Color("#f2c94c"))
 				Sfx.play("fail", 1.4)
 			"bump":
 				Sfx.play("bump", 1.3)
-		if not prev.is_empty():
-			var was: Dictionary = prev.crabs[i]
-			if c.carrying and not was.carrying:
-				_burst(at, Color("#6fe0c0"), 14, 0.9)
-				Sfx.play("collect", 1.0 + i * 0.08)
+		if not prev.is_empty() and c.carrying and not was.carrying:
+			_icon_float(at, ICON_SPARKLE, Color("#b6ffe9"))
+			Sfx.play("collect", 1.0 + i * 0.08)
 	if not prev.is_empty() and f.delivered > prev.delivered:
-		_burst(_cell_center(Vector2(map.nest[0], map.nest[1])), Palette.ACCENT, 30, 1.4)
+		var nest := Vector2(map.nest[0], map.nest[1])
+		_icon_float(nest, ICON_SPARKLE, Palette.ACCENT)
+		_burst(nest, Palette.ACCENT, 18)
 		Sfx.play("deposit")
+
+
+## 칸 위로 떠오르며 사라지는 아이콘.
+func _icon_float(cell: Vector2, icon: Vector2i, color: Color) -> void:
+	_particles.append({"kind": "icon", "cell": cell, "icon": icon, "color": color, "life": 1.0, "age": 0.0})
+
+
+## 칸에서 튀어 나가는 픽셀 조각들 (그림 픽셀 단위로 움직인다).
+func _burst(cell: Vector2, color: Color, count: int) -> void:
+	for i in count:
+		var a := randf() * TAU
+		_particles.append({
+			"kind": "pixel", "pos": (cell + Vector2(0.5, 0.5)) * T, "vel": Vector2(cos(a), sin(a)) * randf_range(20.0, 55.0),
+			"color": color, "life": randf_range(0.35, 0.7), "age": 0.0,
+		})
+
+
+func celebrate() -> void:
+	var colors := [Palette.ACCENT, Palette.GREEN, Palette.SKY, Palette.WARN, Color("#b6ffe9")]
+	var center := Vector2(map.get("w", 10), map.get("h", 6)) * T / 2.0
+	for i in 90:
+		var a := i * 2.399
+		var sp := 40.0 + float((i * 37) % 100) * 0.9
+		_particles.append({
+			"kind": "pixel", "pos": center, "vel": Vector2(cos(a), sin(a)) * sp + Vector2(0, -60),
+			"color": colors[i % 5], "life": 1.3 + float((i * 13) % 10) * 0.08, "age": 0.0, "gravity": 140.0,
+		})
 
 
 func _process(delta: float) -> void:
 	_clock += delta
 	for p in _particles:
-		p.vel.y += p.gravity * delta
-		p.pos += p.vel * delta
+		p.age += delta
 		p.life -= delta
+		if p.kind == "pixel":
+			p.vel.y += p.get("gravity", 60.0) * delta
+			p.pos += p.vel * delta
 	_particles = _particles.filter(func(p): return p.life > 0.0)
 	queue_redraw()
-
-
-func _burst(at: Vector2, color: Color, count: int, power: float) -> void:
-	for i in count:
-		var a := randf() * TAU
-		var sp := randf_range(0.5, 2.0) * _tile * power
-		_particles.append({
-			"pos": at, "vel": Vector2(cos(a), sin(a)) * sp, "life": randf_range(0.35, 0.8),
-			"color": color, "size": _tile * randf_range(0.03, 0.07), "gravity": _tile * 2.5,
-		})
-
-
-func celebrate() -> void:
-	var colors := [Palette.ACCENT, Palette.GREEN, Palette.SKY, Palette.WARN, Color("#6fe0c0")]
-	var c := Vector2(size.x / 2.0, size.y * 0.4)
-	for i in 110:
-		var a := i * 2.399
-		var sp := 140.0 + float((i * 37) % 100) * 2.8
-		_particles.append({
-			"pos": c, "vel": Vector2(cos(a), sin(a)) * sp + Vector2(0, -200),
-			"life": 1.3 + float((i * 13) % 10) * 0.08, "color": colors[i % 5], "size": 7.0, "gravity": 560.0,
-		})
 
 
 # ── 좌표 ─────────────────────────────────────────────────────────
@@ -142,253 +167,178 @@ func _ground(x: int, y: int) -> String:
 
 
 func _layout() -> void:
-	var cols: float = map.w
-	var rows: float = map.h
-	_tile = minf(minf((size.x - 16.0) / cols, (size.y - 44.0) / rows), 72.0)
-	_origin = Vector2((size.x - _tile * cols) / 2.0, 36.0 + (size.y - 36.0 - _tile * rows) / 2.0)
+	# 위쪽 정보 줄은 지도 모서리(바위) 위에 겹쳐 그린다 (그래야 정수 배율을 한 단계 크게 쓸 수 있다).
+	var top := 8.0
+	var avail := Vector2(size.x - 16.0, size.y - top - 8.0)
+	_scale = maxi(1, int(floor(minf(avail.x / (map.w * T), avail.y / (map.h * T)))))
+	var px := Vector2(map.w, map.h) * T * _scale
+	_origin = Vector2(floor((size.x - px.x) / 2.0), floor(top + (size.y - top - px.y) / 2.0))
 
 
-func _cell_center(cell: Vector2) -> Vector2:
-	return _origin + (cell + Vector2(0.5, 0.5)) * _tile
+## 그림 픽셀 좌표(지도 왼쪽 위 기준)를 화면 좌표로. 픽셀 격자에 딱 맞춘다.
+func _screen(art_px: Vector2) -> Vector2:
+	return _origin + art_px.round() * _scale
 
 
-func _cell_rect(x: int, y: int) -> Rect2:
-	return Rect2(_origin + Vector2(x, y) * _tile, Vector2(_tile, _tile))
+func _draw_tile(cell: Vector2, index: int, color := Color.WHITE) -> void:
+	var dst := Rect2(_screen(cell * T), Vector2(T, T) * _scale)
+	draw_texture_rect_region(_tiles, dst, Rect2(index * T, 0, T, T), color)
+
+
+func _draw_sprite(tex: Texture2D, frame: int, art_px: Vector2, color := Color.WHITE, flip := false, rotate_quarter := 0) -> void:
+	var size_px := Vector2(T, T) * _scale
+	var pos := _screen(art_px)
+	if flip or rotate_quarter != 0:
+		var center := pos + size_px / 2.0
+		draw_set_transform(center, rotate_quarter * PI / 2.0, Vector2(-1 if flip else 1, 1))
+		draw_texture_rect_region(tex, Rect2(-size_px / 2.0, size_px), Rect2(frame * T, 0, T, T), color)
+		draw_set_transform(Vector2.ZERO)
+	else:
+		draw_texture_rect_region(tex, Rect2(pos, size_px), Rect2(frame * T, 0, T, T), color)
+
+
+func _draw_icon(icon: Vector2i, art_px: Vector2, color: Color) -> void:
+	var dst := Rect2(_screen(art_px), Vector2(T, T) * _scale)
+	draw_texture_rect_region(_icons, dst, Rect2(icon.x * T, icon.y * T, T, T), color)
 
 
 # ── 그리기 ───────────────────────────────────────────────────────
 
 func _draw() -> void:
-	# 밤바다
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#0e1e30"))
+	draw_rect(Rect2(Vector2.ZERO, size), Color("#0f263d"))
 	if map.is_empty() or frames.is_empty() or size.x < 60.0 or size.y < 60.0:
 		return
 	_layout()
-	if _tile < 6.0:
-		return
-	_draw_waves()
-
 	var k := int(floor(time))
 	var f := clampf(time - k, 0.0, 1.0)
 	var a := frame_at(k)
 	var b := frame_at(k + 1)
 	var e := f * f * (3.0 - 2.0 * f)
+	var water_frame := int(_clock * 1.6) % 2
+
+	# 화면 전체를 바다로 덮는다 (지도 격자에 맞춰서).
+	var first := ((-_origin) / (T * _scale)).floor() - Vector2.ONE
+	var count := (size / (T * _scale)).ceil() + Vector2(3, 3)
+	for gy in int(count.y):
+		for gx in int(count.x):
+			var cell := first + Vector2(gx, gy)
+			# posmod: 음수 칸에서도 0 또는 1 (그냥 % 는 -1 이 나와 다른 타일을 가리킨다)
+			_draw_tile(cell, Tile.WATER0 + posmod(water_frame + int(cell.x + cell.y), 2))
 
 	# 밀물 정도 (0 = 다 빠짐, 1 = 다 참)
-	var flood_a := 1.0 if a.tide.kind == "high" else 0.0
-	var flood_b := 1.0 if b.tide.kind == "high" else 0.0
-	var flood: float = lerp(flood_a, flood_b, e)
+	var flood: float = lerp(1.0 if a.tide.kind == "high" else 0.0, 1.0 if b.tide.kind == "high" else 0.0, e)
 
-	_draw_ground(flood)
+	for y in map.h:
+		for x in map.w:
+			var g := _ground(x, y)
+			var cell := Vector2(x, y)
+			var h := absi(hash(Vector2i(x, y)))
+			match g:
+				"#":
+					if _near_open(x, y):
+						_draw_tile(cell, Tile.ROCK0 + h % 2)
+				"w":
+					pass
+				"~":
+					_draw_tile(cell, Tile.FLAT0 + h % 2)
+					if flood > 0.0:
+						_draw_tile(cell, Tile.FLOOD0 + water_frame, Color(1, 1, 1, flood))
+				"N":
+					_draw_tile(cell, Tile.NEST)
+				_:
+					_draw_tile(cell, Tile.SAND0 + h % 2)
 
-	var foods: Array = a.foods if f < 0.5 else b.foods
-	for food in foods:
-		_draw_food(_cell_center(Vector2(food.x, food.y)), 1.0)
+	var food_frame := int(_clock * 3.0) % 2
+	for food in (a.foods if f < 0.5 else b.foods):
+		_draw_sprite(_food, food_frame, Vector2(food.x, food.y) * T)
 
 	for i in a.gulls.size():
 		var ga: Dictionary = a.gulls[i]
 		var gb: Dictionary = b.gulls[i] if i < b.gulls.size() else ga
-		var pos := Vector2(ga.x, ga.y).lerp(Vector2(gb.x, gb.y), e)
-		_draw_gull(_cell_center(pos), gb.dir, i)
+		var pos := Vector2(ga.x, ga.y).lerp(Vector2(gb.x, gb.y), e) * T
+		# 그림자 → 갈매기 (조금 떠 있다)
+		draw_rect(Rect2(_screen(pos + Vector2(4, 12)), Vector2(8, 2) * _scale), Color(0, 0, 0, 0.35))
+		_draw_sprite(_gull, int(_clock * 6.0 + i) % 2, pos + Vector2(0, -3), Color.WHITE, gb.dir == "W")
 
 	var order := range(a.crabs.size())
-	# 고른 꽃게를 맨 위에 그린다.
 	order.erase(selected)
-	order.append(selected)
+	order.append(selected) # 고른 꽃게를 맨 위에
 	for i in order:
 		if i < a.crabs.size():
 			_draw_crab(i, a.crabs[i], b.crabs[i] if i < b.crabs.size() else a.crabs[i], f, e)
 
 	for p in _particles:
 		var lk := clampf(p.life, 0.0, 1.0)
-		draw_circle(p.pos, p.size * (0.6 + lk), Color(p.color, lk), true, -1.0, true)
+		if p.kind == "icon":
+			_draw_icon(p.icon, p.cell * T + Vector2(0, -6 - p.age * 10.0), Color(p.color, lk))
+		else:
+			draw_rect(Rect2(_screen(p.pos), Vector2(_scale, _scale)), Color(p.color, lk))
 
-	_draw_hud(a if f < 0.5 else b, flood)
-
-
-func _draw_waves() -> void:
-	var c := Color("#16314c")
-	for i in 7:
-		var y := fmod(i * 61.0 + _clock * 6.0, size.y + 40.0) - 20.0
-		var pts := PackedVector2Array()
-		var x := -10.0
-		while x < size.x + 20.0:
-			pts.append(Vector2(x, y + sin(x * 0.03 + _clock * 0.8 + i) * 4.0))
-			x += 16.0
-		draw_polyline(pts, c, 1.5, true)
-
-
-func _rounded(rect: Rect2, color: Color, radius: float) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = color
-	sb.set_corner_radius_all(int(radius))
-	sb.anti_aliasing = true
-	draw_style_box(sb, rect)
-
-
-func _draw_ground(flood: float) -> void:
-	var t := _tile
-	for y in map.h:
-		for x in map.w:
-			var g := _ground(x, y)
-			var r := _cell_rect(x, y)
-			match g:
-				"#":
-					if _near_open(x, y):
-						_draw_rock(r, x, y)
-				"w":
-					_draw_water(r, 1.0)
-				_:
-					var sand := Color("#6e604f") if (x + y) % 2 == 0 else Color("#6a5c4b")
-					if g == "~":
-						sand = Color("#4f5560") if (x + y) % 2 == 0 else Color("#4b515c")
-					_rounded(r.grow(-1.0), sand, t * 0.12)
-					if g == "~":
-						# 젖은 갯벌 무늬
-						draw_line(r.position + Vector2(t * 0.2, t * 0.7), r.position + Vector2(t * 0.45, t * 0.62), Color(1, 1, 1, 0.08), 1.5, true)
-						draw_line(r.position + Vector2(t * 0.55, t * 0.35), r.position + Vector2(t * 0.8, t * 0.3), Color(1, 1, 1, 0.08), 1.5, true)
-						if flood > 0.0:
-							_draw_water(r, flood)
-					if g == "N":
-						var c := r.get_center()
-						draw_circle(c, t * 0.36, Color("#3a2a20"), true, -1.0, true)
-						draw_circle(c, t * 0.27, Color("#1e1510"), true, -1.0, true)
-						draw_arc(c, t * 0.36, 0.0, TAU, 40, Color(Palette.ACCENT, 0.7), 2.0, true)
+	_draw_hud(a if f < 0.5 else b)
 
 
 func _near_open(x: int, y: int) -> bool:
 	for dy in range(-1, 2):
 		for dx in range(-1, 2):
-			var g := _ground(x + dx, y + dy)
-			if g != "#" and not (x + dx < 0 or y + dy < 0 or x + dx >= map.w or y + dy >= map.h):
+			var nx := x + dx
+			var ny := y + dy
+			if nx >= 0 and ny >= 0 and nx < map.w and ny < map.h and _ground(nx, ny) != "#":
 				return true
 	return false
 
 
-## 해안 바위: 칸마다 조금씩 다른 둥근 돌 두세 개.
-func _draw_rock(r: Rect2, x: int, y: int) -> void:
-	var t := _tile
-	var h := absi(hash(Vector2i(x, y)))
-	var c := r.get_center()
-	var stones := 2 + (h % 2)
-	for i in stones:
-		var k := (h >> (i * 5)) & 31
-		var off := Vector2(((k % 7) - 3) * t * 0.06, (((k >> 3) % 4) - 1.5) * t * 0.08)
-		var rad := t * (0.34 - i * 0.06 + (k % 3) * 0.02)
-		var base := Color("#2a2d40").lerp(Color("#33374d"), float(k % 5) / 5.0)
-		draw_circle(c + off + Vector2(0, t * 0.04), rad, Color(0, 0, 0, 0.25), true, -1.0, true)
-		draw_circle(c + off, rad, base, true, -1.0, true)
-		draw_circle(c + off - Vector2(rad * 0.25, rad * 0.3), rad * 0.45, base.lightened(0.12), true, -1.0, true)
-
-
-func _draw_water(r: Rect2, alpha: float) -> void:
-	_rounded(r, Color(0.12, 0.33, 0.52, 0.92 * alpha), _tile * 0.1)
-	var y := r.position.y + r.size.y * (0.35 + 0.1 * sin(_clock * 2.0 + r.position.x * 0.05))
-	draw_line(Vector2(r.position.x + 4, y), Vector2(r.end.x - 4, y), Color(0.6, 0.85, 1.0, 0.25 * alpha), 1.5, true)
-	var y2 := r.position.y + r.size.y * (0.7 + 0.08 * sin(_clock * 2.4 + r.position.y * 0.05))
-	draw_line(Vector2(r.position.x + r.size.x * 0.3, y2), Vector2(r.end.x - 6, y2), Color(0.6, 0.85, 1.0, 0.18 * alpha), 1.5, true)
-
-
-func _draw_food(c: Vector2, alpha: float) -> void:
-	var pulse := 1.0 + 0.12 * sin(_clock * 4.0 + c.x * 0.1)
-	var t := _tile
-	draw_circle(c, t * 0.26 * pulse, Color(0.44, 0.88, 0.75, 0.12 * alpha), true, -1.0, true)
-	draw_circle(c, t * 0.17 * pulse, Color(0.44, 0.88, 0.75, 0.25 * alpha), true, -1.0, true)
-	draw_circle(c, t * 0.1, Color(0.62, 1.0, 0.88, alpha), true, -1.0, true)
-	draw_circle(c + Vector2(-t * 0.03, -t * 0.03), t * 0.035, Color(1, 1, 1, 0.9 * alpha), true, -1.0, true)
-
-
-func _draw_gull(c: Vector2, dir: String, i: int) -> void:
-	var t := _tile
-	var face: float = 1.0 if dir == "E" else (-1.0 if dir == "W" else 1.0)
-	var flap := sin(_clock * 9.0 + i * 1.7)
-	# 그림자
-	draw_set_transform(c + Vector2(0, t * 0.32), 0.0, Vector2(1.0, 0.3))
-	draw_circle(Vector2.ZERO, t * 0.28, Color(0, 0, 0, 0.28), true, -1.0, true)
-	draw_set_transform(Vector2.ZERO)
-	var body := c + Vector2(0, -t * 0.12 + flap * t * 0.02)
-	# 날개
-	for side in [-1.0, 1.0]:
-		var tip := body + Vector2(-face * t * 0.05, side * t * (0.36 + flap * 0.08))
-		draw_colored_polygon(PackedVector2Array([body + Vector2(face * t * 0.1, 0), tip, body + Vector2(-face * t * 0.18, 0)]), Color("#d9dde8"))
-	draw_set_transform(body, 0.0, Vector2(1.0, 0.62))
-	draw_circle(Vector2.ZERO, t * 0.2, Color("#f4f6fb"), true, -1.0, true)
-	draw_set_transform(Vector2.ZERO)
-	draw_circle(body + Vector2(face * t * 0.18, -t * 0.04), t * 0.09, Color("#f4f6fb"), true, -1.0, true)
-	draw_circle(body + Vector2(face * t * 0.21, -t * 0.06), t * 0.022, Color("#1a1a22"), true, -1.0, true)
-	draw_colored_polygon(PackedVector2Array([
-		body + Vector2(face * t * 0.26, -t * 0.05), body + Vector2(face * t * 0.36, -t * 0.02), body + Vector2(face * t * 0.26, 0),
-	]), Color("#f2b13c"))
-
-
 func _draw_crab(i: int, ca: Dictionary, cb: Dictionary, f: float, e: float) -> void:
-	var t := _tile
-	var colors: Array = CRAB_COLORS[i % CRAB_COLORS.size()]
 	var pa := Vector2(ca.x, ca.y)
 	var pb := Vector2(cb.x, cb.y)
-	var pos := pa.lerp(pb, e)
+	var cell := pa.lerp(pb, e)
 	var alpha := 1.0
 	var teleport := pa.distance_to(pb) > 1.01
 	if teleport:
 		# 휩쓸리거나 쫓겨 굴로 돌아갈 때는 사라졌다가 굴에서 나타난다.
-		pos = pa if f < 0.5 else pb
+		cell = pa if f < 0.5 else pb
 		alpha = absf(f - 0.5) * 2.0
-	var walk := 0.0
-	var hop := 0.0
-	if not teleport and pa != pb:
-		walk = f
-		hop = sin(f * PI) * 0.05
+	var moving := not teleport and pa != pb
+	var art := cell * T
 	if cb.mishap == "bump" and not teleport:
-		pos += DIR_VEC[cb.facing] * sin(f * PI) * 0.2
-	var c := _cell_center(pos) - Vector2(0, hop * t)
-	# 꽃게는 옆으로 걷는다: 가는 방향과 90도 돌려 그린다.
-	var angle: float = DIR_ANGLE[cb.facing] - PI / 2.0
-	var shell: Color = Color(colors[0], alpha)
-	var dark: Color = Color(colors[1], alpha)
-	var crowd := 0.0
+		art += DIR_VEC[cb.facing] * round(sin(f * PI) * 3.0)
+	if moving:
+		art.y -= round(sin(f * PI) * 1.0) # 걸을 때 살짝 들썩
 	# 굴 위에 여러 마리가 겹치면 조금씩 비켜 그린다.
-	if Vector2(cb.x, cb.y) == Vector2(map.nest[0], map.nest[1]) and pos.distance_to(pb) < 0.01:
-		crowd = (i - (map.crabs - 1) / 2.0) * 0.18
-	c += Vector2(crowd * t, 0)
-	var body_scale := 0.82 if map.crabs > 1 else 0.95
+	if Vector2(cb.x, cb.y) == Vector2(map.nest[0], map.nest[1]) and not moving and map.crabs > 1:
+		art.x += (i - (map.crabs - 1) / 2.0) * 4.0
+	var frame := (1 if f >= 0.5 else 0) if moving else 0
+	# 꽃게는 옆으로 걷는다: 동서로 가면 그대로, 남북으로 가면 90도 돌린다.
+	var quarter := 1 if cb.facing in ["N", "S"] else 0
+	var color := Color(1, 1, 1, alpha)
 
-	if i == selected:
-		var ring := Color(1, 1, 1, (0.35 + 0.2 * sin(_clock * 4.0)) * alpha)
-		draw_arc(c, t * 0.42, 0.0, TAU, 40, ring, 2.0, true)
-	draw_set_transform(c + Vector2(0, t * 0.28), 0.0, Vector2(1.0, 0.3))
-	draw_circle(Vector2.ZERO, t * 0.27, Color(0, 0, 0, 0.25 * alpha), true, -1.0, true)
-	draw_set_transform(Vector2.ZERO)
-	CrabArt.draw_crab(self, c, t * body_scale, angle, walk, 0.0, shell, dark)
+	if i == selected and map.crabs > 1:
+		_draw_icon(ICON_CORNERS, art, Color(1, 1, 1, 0.55 + 0.25 * sin(_clock * 5.0)))
+	draw_rect(Rect2(_screen(art + Vector2(3, 13)), Vector2(10, 2) * _scale), Color(0, 0, 0, 0.3 * alpha))
+	_draw_sprite(_crabs[i % _crabs.size()], frame, art, color, false, quarter)
 	var carrying: bool = ca.carrying if f < 0.5 else cb.carrying
 	if carrying and alpha > 0.3:
-		_draw_food(c - Vector2(0, t * 0.05), alpha)
-	if map.crabs > 1:
-		var font := Palette.code_font()
-		var label := str(i)
-		var p := c + Vector2(t * 0.26, -t * 0.26)
-		draw_circle(p, t * 0.13, Color(colors[1], 0.95 * alpha), true, -1.0, true)
-		var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(t * 0.18)).x
-		draw_string(font, p + Vector2(-w / 2.0, t * 0.065), label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(t * 0.18), Color(1, 1, 1, alpha))
+		_draw_sprite(_food, 0, art + Vector2(0, -7), color)
 
 
-func _draw_hud(fr: Dictionary, flood: float) -> void:
-	var font := Palette.text_font()
+func _draw_hud(fr: Dictionary) -> void:
+	var font := Palette.pixel_font()
 	var x := 12.0
-	var text := "틱 %d / %d" % [fr.tick, map.maxTicks]
-	x = _chip(x, text, Palette.TEXT, font)
-	x = _chip(x, "배달 %d / %d" % [fr.delivered, map.goal], Color("#6fe0c0"), font)
+	x = _chip(x, "틱 %d / %d" % [fr.tick, map.maxTicks], Palette.TEXT, font)
+	x = _chip(x, "배달 %d / %d" % [fr.delivered, map.goal], Color("#b6ffe9"), font)
 	match fr.tide.kind:
 		"low":
-			x = _chip(x, "썰물 · %d틱 뒤 밀물" % fr.tide.turnsLeft, Palette.WARN if fr.tide.turnsLeft <= 3 else Palette.SKY, font)
+			_chip(x, "썰물 · %d틱 뒤 밀물" % fr.tide.turnsLeft, Palette.WARN if fr.tide.turnsLeft <= 3 else Palette.SKY, font)
 		"high":
-			x = _chip(x, "밀물 · %d틱 뒤 빠짐" % fr.tide.turnsLeft, Color("#7fc8ff"), font)
+			_chip(x, "밀물 · %d틱 뒤 빠짐" % fr.tide.turnsLeft, Color("#8fd0ff"), font)
 
 
 func _chip(x: float, text: String, color: Color, font: Font) -> float:
-	var fs := 13
+	var fs := Palette.PIXEL_SIZE
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 20.0
-	_rounded(Rect2(x, 8, w, 24), Color(0, 0, 0, 0.35), 12)
-	draw_string(font, Vector2(x + 10, 8 + 12 + (font.get_ascent(fs) - font.get_descent(fs)) / 2.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, color)
+	draw_rect(Rect2(x, 8, w, 24), Color(0.02, 0.05, 0.09, 0.75))
+	draw_rect(Rect2(x, 8, w, 24), Color(1, 1, 1, 0.12), false, 2.0)
+	var baseline := 8.0 + 12.0 + (font.get_ascent(fs) - font.get_descent(fs)) / 2.0
+	draw_string(font, Vector2(x + 10, round(baseline)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, color)
 	return x + w + 6.0
 
 
@@ -400,10 +350,11 @@ func _gui_input(event: InputEvent) -> void:
 		if fr.is_empty():
 			return
 		var best := -1
-		var best_d := _tile * 0.6
+		var best_d := float(T * _scale) * 0.7
 		for i in fr.crabs.size():
 			var c: Dictionary = fr.crabs[i]
-			var d := _cell_center(Vector2(c.x, c.y)).distance_to(event.position)
+			var center := _screen(Vector2(c.x, c.y) * T) + Vector2(T, T) * _scale / 2.0
+			var d: float = center.distance_to(event.position)
 			if d < best_d:
 				best_d = d
 				best = i
