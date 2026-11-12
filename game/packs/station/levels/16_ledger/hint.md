@@ -1,0 +1,1 @@
+`Scanner::scan` 에서 `view.pos()`, `view.sight()`, `view.tile_at(x, y)` 로 주변을 훑어 `self.ledger.borrow_mut().seen.insert((x, y), tile)` 로 적어요. `Planner::target` 은 `let ledger = self.ledger.borrow();` 로 읽어서 기억 속 `Slot`/`Module`/`Core` 중 가장 가까운 칸을, 없으면 아직 못 본 가장 가까운 칸을 골라요. 13레벨 풀이와 거의 같아요.
