@@ -1,0 +1,1 @@
+`Store`: `(view.here() == Tile::Barn && view.carrying()).then_some(Action::Store)`, `Harvest`: 발밑이 `Tile::Crop` 이고 들고 있지 않을 때. `Water`: 발밑이 `Tile::Seed`. 마지막 `Walk` 는 `let dir = if view.carrying() { view.barn_dir() } else { view.crop_dir().or(view.plot_dir()) };` 로 방향을 고르고 `match dir { Some(d) if view.danger(d) => None, Some(d) => Some(Action::Move(d)), None => None }`.

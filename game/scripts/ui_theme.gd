@@ -87,11 +87,16 @@ static func build() -> Theme:
 
 	# 테두리 버튼 (보조 동작)
 	t.set_type_variation("OutlineButton", "Button")
-	var outline := box(Color(0, 0, 0, 0), 8, 14, 7)
-	outline.border_color = Palette.BORDER
-	outline.set_border_width_all(2)
-	var outline_hover := outline.duplicate()
-	outline_hover.bg_color = Palette.PANEL_HI
+	var outline := sprite_box("res://assets/ui_panel.png")
+	outline.content_margin_left = 14
+	outline.content_margin_right = 14
+	outline.content_margin_top = 7
+	outline.content_margin_bottom = 7
+	var outline_hover := sprite_box("res://assets/ui_panel.png", Color(0.93, 0.9, 0.84))
+	outline_hover.content_margin_left = 14
+	outline_hover.content_margin_right = 14
+	outline_hover.content_margin_top = 7
+	outline_hover.content_margin_bottom = 7
 	t.set_stylebox("normal", "OutlineButton", outline)
 	t.set_stylebox("hover", "OutlineButton", outline_hover)
 	t.set_stylebox("pressed", "OutlineButton", outline_hover)

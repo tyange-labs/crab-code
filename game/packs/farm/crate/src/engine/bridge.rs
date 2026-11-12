@@ -516,3 +516,62 @@ impl From<w::Flood> for crate::level10::Flood {
         }
     }
 }
+
+// ── level11 ──
+impl From<crate::level11::Action> for w::Action {
+    fn from(a: crate::level11::Action) -> w::Action {
+        match a {
+            crate::level11::Action::Wait => w::Action::Wait,
+            crate::level11::Action::Move(d) => w::Action::Move(d.into()),
+            crate::level11::Action::Harvest => w::Action::Harvest,
+            crate::level11::Action::Store => w::Action::Store,
+            crate::level11::Action::Plant => w::Action::Plant,
+            crate::level11::Action::Water => w::Action::Water,
+        }
+    }
+}
+impl From<crate::level11::Dir> for w::Dir {
+    fn from(d: crate::level11::Dir) -> w::Dir {
+        match d {
+            crate::level11::Dir::North => w::Dir::North,
+            crate::level11::Dir::East => w::Dir::East,
+            crate::level11::Dir::South => w::Dir::South,
+            crate::level11::Dir::West => w::Dir::West,
+        }
+    }
+}
+impl From<w::Dir> for crate::level11::Dir {
+    fn from(d: w::Dir) -> crate::level11::Dir {
+        match d {
+            w::Dir::North => crate::level11::Dir::North,
+            w::Dir::East => crate::level11::Dir::East,
+            w::Dir::South => crate::level11::Dir::South,
+            w::Dir::West => crate::level11::Dir::West,
+        }
+    }
+}
+impl From<w::Tile> for crate::level11::Tile {
+    fn from(t: w::Tile) -> crate::level11::Tile {
+        match t {
+            w::Tile::Soil => crate::level11::Tile::Soil,
+            w::Tile::Crop => crate::level11::Tile::Crop,
+            w::Tile::Barn => crate::level11::Tile::Barn,
+            w::Tile::Stone => crate::level11::Tile::Stone,
+            w::Tile::Paddy => crate::level11::Tile::Paddy,
+            w::Tile::Water => crate::level11::Tile::Water,
+            w::Tile::Goblin => crate::level11::Tile::Goblin,
+            w::Tile::Plot => crate::level11::Tile::Plot,
+            w::Tile::Seed => crate::level11::Tile::Seed,
+            w::Tile::Sprout => crate::level11::Tile::Sprout,
+        }
+    }
+}
+impl From<w::Flood> for crate::level11::Flood {
+    fn from(t: w::Flood) -> crate::level11::Flood {
+        match t {
+            w::Flood::Low { turns_left } => crate::level11::Flood::Low { turns_left },
+            w::Flood::High { turns_left } => crate::level11::Flood::High { turns_left },
+            w::Flood::Calm => crate::level11::Flood::Calm,
+        }
+    }
+}
