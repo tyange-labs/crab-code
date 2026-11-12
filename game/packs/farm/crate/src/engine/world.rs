@@ -231,6 +231,18 @@ pub struct Plot {
     pub stage: PlotStage,
 }
 
+/// 멀리 볼 때 실패하는 까닭.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Sight {
+    /// 지도 밖이다.
+    OffMap,
+    /// 너무 멀다 (시야는 걸음 수로 SIGHT 칸).
+    TooFar,
+}
+
+/// 농부가 볼 수 있는 거리 (걸음 수).
+pub const SIGHT: i32 = 7;
+
 /// 물을 준 뒤 다 자랄 때까지 걸리는 틱.
 pub const GROW_TICKS: u32 = 4;
 
@@ -248,6 +260,8 @@ pub struct View {
     barn_dir: Option<Dir>,
     plot_dir: Option<Dir>,
     ripe: Vec<(i32, i32)>,
+    size: (i32, i32),
+    grid: Vec<Tile>,
     flood: Flood,
     delivered: u32,
     goal: u32,
@@ -297,6 +311,22 @@ impl View {
     /// 창고로 가는 첫걸음. 이미 창고 위라면 None.
     pub fn barn_dir(&self) -> Option<Dir> {
         self.barn_dir
+    }
+
+    /// 지도 크기 (가로, 세로).
+    pub fn size(&self) -> (i32, i32) {
+        self.size
+    }
+
+    /// 아무 칸이나 들여다본다. 지도 밖이거나 너무 멀면 Err.
+    pub fn tile_at(&self, x: i32, y: i32) -> Result<Tile, Sight> {
+        if x < 0 || y < 0 || x >= self.size.0 || y >= self.size.1 {
+            return Err(Sight::OffMap);
+        }
+        if (x - self.pos.0).abs() + (y - self.pos.1).abs() > SIGHT {
+            return Err(Sight::TooFar);
+        }
+        Ok(self.grid[(y * self.size.0 + x) as usize])
     }
 
     /// 땅에 놓인(다 자란) 열매 전부의 위치. 가까운 순서가 아니라 놓인 순서예요.
@@ -353,6 +383,8 @@ pub struct Spec {
     reach: bool,
     /// 배달하면 '?' 칸 어딘가에 새 열매가 생긴다.
     respawn: bool,
+    /// false 면 plot_dir() 이 늘 None (이랑은 직접 찾아야 한다).
+    plot_sense: bool,
 }
 
 // 지도 기호
@@ -373,6 +405,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 0,
         respawn: false,
         reach: true,
+        plot_sense: true,
     },
     Spec {
         id: "carry",
@@ -385,6 +418,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 0,
         respawn: false,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "smell",
@@ -405,6 +439,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 3,
         respawn: false,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "maze",
@@ -425,6 +460,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 0,
         respawn: false,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "flood",
@@ -443,6 +479,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 0,
         respawn: false,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "colony",
@@ -465,6 +502,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 3,
         respawn: true,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "sow",
@@ -484,6 +522,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 0,
         respawn: false,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "harvest",
@@ -505,6 +544,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 7,
         respawn: false,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "village",
@@ -526,6 +566,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 0,
         respawn: false,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "thieves",
@@ -547,6 +588,7 @@ pub const SPECS: &[Spec] = &[
         random_crop: 0,
         respawn: false,
         reach: false,
+        plot_sense: true,
     },
     Spec {
         id: "chores",
@@ -568,6 +610,29 @@ pub const SPECS: &[Spec] = &[
         random_crop: 0,
         respawn: false,
         reach: false,
+        plot_sense: true,
+    },
+    Spec {
+        id: "scout",
+        map: &[
+            "###############",
+            "#N............#",
+            "#.............#",
+            "#.p.p.p.p.p.p.#",
+            "#.............#",
+            "#.p.p.p.p.p.p.#",
+            "#.............#",
+            "###############",
+        ],
+        farmers: 2,
+        goal: 8,
+        max_ticks: 220,
+        smell: 0,
+        flood: None,
+        random_crop: 0,
+        respawn: false,
+        reach: false,
+        plot_sense: false,
     },
 ];
 
@@ -591,6 +656,7 @@ pub struct Field {
     pub flood: Option<(u32, u32)>,
     pub respawn: bool,
     pub reach: bool,
+    pub plot_sense: bool,
     pub spots: Vec<(i32, i32)>,
     rng: u64,
     /// 지난 틱에 일어난 일: (농부 번호, 설명)
@@ -626,6 +692,7 @@ pub fn build(level: usize, seed: u64) -> Field {
         flood: spec.flood,
         respawn: spec.respawn,
         reach: spec.reach,
+        plot_sense: spec.plot_sense,
         spots: Vec::new(),
         rng: seed ^ 0xC0FF_EE15_BEEF,
         events: Vec::new(),
@@ -855,7 +922,13 @@ impl Field {
             crop_dir,
             barn_dir: self.first_step((c.x, c.y), |x, y| (x, y) == barn).map(|(d, _)| d),
             ripe: self.crops.iter().filter(|f| f.state == CropState::Ground).map(|f| (f.x, f.y)).collect(),
-            plot_dir: self.first_step((c.x, c.y), |x, y| self.plot_needs_work(x, y)).map(|(d, _)| d),
+            plot_dir: if self.plot_sense {
+                self.first_step((c.x, c.y), |x, y| self.plot_needs_work(x, y)).map(|(d, _)| d)
+            } else {
+                None
+            },
+            size: (self.w, self.h),
+            grid: (0..self.h).flat_map(|gy| (0..self.w).map(move |gx| (gx, gy))).map(|(gx, gy)| self.tile_at(gx, gy)).collect(),
             flood: self.flood_now(),
             delivered: self.delivered,
             goal: self.goal,
