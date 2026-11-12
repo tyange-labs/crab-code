@@ -76,9 +76,16 @@ func _ready() -> void:
 		if target != level:
 			select_level(target))
 
-	%Hint.pressed.connect(func(): _log("힌트: " + lesson().hint.replace("`", ""), "warn"))
+	%Hint.pressed.connect(_toggle_hint)
 	%Solution.pressed.connect(_toggle_solution)
-	%Reset.pressed.connect(_reset_level)
+	var lesson_more: PopupMenu = %LessonMore.get_popup()
+	lesson_more.add_item("처음 코드로 되돌리기…", 0)
+	lesson_more.id_pressed.connect(func(_id: int):
+		%ResetCard.visible = true)
+	%ResetConfirm.pressed.connect(func():
+		%ResetCard.visible = false
+		_reset_level())
+	%ResetCancel.pressed.connect(func(): %ResetCard.visible = false)
 	%Sound.pressed.connect(_toggle_sound)
 	%StatusAction.pressed.connect(_on_status_action)
 	var more: PopupMenu = %More.get_popup()
@@ -128,6 +135,23 @@ func _style_static_nodes() -> void:
 	%GoalLabel.add_theme_color_override("font_color", Palette.ACCENT)
 	%GoalLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%GoalText.callouts = false
+	%HintText.callouts = false
+	%HintLabel.add_theme_font_override("font", Palette.pixel_font())
+	%HintLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
+	%HintLabel.add_theme_color_override("font_color", Palette.WARN)
+	var hint_box := UiTheme.box(Color(Palette.WARN, 0.08), 8, 14, 10)
+	hint_box.border_color = Color(Palette.WARN, 0.7)
+	hint_box.set_border_width_all(2)
+	%HintCard.add_theme_stylebox_override("panel", hint_box)
+	var reset_box := UiTheme.box(Palette.PANEL_HI, 8, 14, 10)
+	reset_box.border_color = Color(Palette.RED, 0.5)
+	reset_box.set_border_width_all(2)
+	%ResetCard.add_theme_stylebox_override("panel", reset_box)
+	%ResetTitle.add_theme_font_override("font", Palette.pixel_font())
+	%ResetTitle.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
+	%ResetNote.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+	%ResetNote.add_theme_color_override("font_color", Palette.TEXT2)
+	%LessonMore.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	var goal := UiTheme.box(Color(Palette.ACCENT, 0.08), 8, 14, 10)
 	goal.border_width_left = 3
 	goal.border_color = Palette.ACCENT
@@ -338,6 +362,9 @@ func select_level(index: int) -> void:
 	show_solution = false
 	confirm_solution = false
 	%Solution.text = "정답 보기"
+	%HintCard.visible = false
+	%Hint.text = "힌트"
+	%ResetCard.visible = false
 	result = {}
 	playing = false
 	_render_lesson()
@@ -712,6 +739,14 @@ func _toggle_solution() -> void:
 	if show_solution:
 		await get_tree().process_frame
 		%LessonScroll.scroll_vertical = int(%LessonBody.size.y)
+
+
+## 힌트는 레슨 안에 펼쳐 둔다 (출력 창처럼 지워지지 않게).
+func _toggle_hint() -> void:
+	%HintCard.visible = not %HintCard.visible
+	%Hint.text = "힌트 숨기기" if %HintCard.visible else "힌트"
+	if %HintCard.visible:
+		%HintText.markdown = String(lesson().get("hint", "")).strip_edges()
 
 
 func _reset_level() -> void:

@@ -190,6 +190,63 @@ layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("3_md")
 
+[node name="HintCard" type="PanelContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox/HintCard"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HintLabel" type="Label" parent="Margin/Root/Body/Left/LessonPanel/VBox/HintCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "힌트"
+
+[node name="HintText" type="Control" parent="Margin/Root/Body/Left/LessonPanel/VBox/HintCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("3_md")
+
+[node name="ResetCard" type="PanelContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox/ResetCard"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ResetTitle" type="Label" parent="Margin/Root/Body/Left/LessonPanel/VBox/ResetCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "처음 코드로 되돌릴까요?"
+
+[node name="ResetNote" type="Label" parent="Margin/Root/Body/Left/LessonPanel/VBox/ResetCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+text = "지금 코드는 git 에 커밋해 둬요. 언제든 git 기록에서 되찾을 수 있어요."
+
+[node name="ResetRow" type="HBoxContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox/ResetCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ResetConfirm" type="Button" parent="Margin/Root/Body/Left/LessonPanel/VBox/ResetCard/VBox/ResetRow"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"DangerButton"
+text = "되돌리기"
+
+[node name="ResetCancel" type="Button" parent="Margin/Root/Body/Left/LessonPanel/VBox/ResetCard/VBox/ResetRow"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"OutlineButton"
+text = "취소"
+
 [node name="Buttons" type="HBoxContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
@@ -199,6 +256,7 @@ unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 theme_type_variation = &"OutlineButton"
+tooltip_text = "힌트 (H)"
 text = "힌트"
 
 [node name="Solution" type="Button" parent="Margin/Root/Body/Left/LessonPanel/VBox/Buttons"]
@@ -212,13 +270,11 @@ text = "정답 보기"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Reset" type="Button" parent="Margin/Root/Body/Left/LessonPanel/VBox/Buttons"]
+[node name="LessonMore" type="MenuButton" parent="Margin/Root/Body/Left/LessonPanel/VBox/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
-focus_mode = 0
-tooltip_text = "파일을 처음 코드로 되돌려요. 지금 코드는 git 에 커밋해 둬요."
-theme_type_variation = &"OutlineButton"
-text = "처음 코드로"
+tooltip_text = "더 보기"
+text = "⋯"
 
 [node name="Right" type="VBoxContainer" parent="Margin/Root/Body"]
 layout_mode = 2
