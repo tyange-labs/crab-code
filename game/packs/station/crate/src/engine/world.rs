@@ -753,6 +753,32 @@ pub const SPECS: &[Spec] = &[
         slot_sense: false,
         sight: 3,
     },
+    Spec {
+        id: "route",
+        map: &[
+            "#################",
+            "#N....#.....#...#",
+            "#.###.#.###.#.#.#",
+            "#.?.#...#.?.#.#.#",
+            "###.#####.###.#.#",
+            "#.....#...#...#.#",
+            "#.###.#.#.#.###.#",
+            "#.#?..#.#.....#.#",
+            "#.#####.#######.#",
+            "#...?...?.....?.#",
+            "#################",
+        ],
+        bots: 1,
+        goal: 3,
+        max_ticks: 260,
+        smell: 0,
+        pressure: None,
+        random_core: 3,
+        respawn: false,
+        reach: false,
+        slot_sense: true,
+        sight: 40,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();
