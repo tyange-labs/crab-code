@@ -676,6 +676,29 @@ pub const SPECS: &[Spec] = &[
         plot_sense: false,
         sight: 3,
     },
+    Spec {
+        id: "board",
+        map: &[
+            "###############",
+            "#N............#",
+            "#.............#",
+            "#.p.p.p.p.p.p.#",
+            "#.............#",
+            "#.p.p.p.p.p.p.#",
+            "#.............#",
+            "###############",
+        ],
+        farmers: 4,
+        goal: 12,
+        max_ticks: 130,
+        smell: u32::MAX,
+        flood: None,
+        random_crop: 0,
+        respawn: false,
+        reach: false,
+        plot_sense: true,
+        sight: 30,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();

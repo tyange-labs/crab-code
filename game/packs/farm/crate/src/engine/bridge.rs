@@ -711,3 +711,71 @@ impl From<w::Sight> for crate::level13::SightError {
         }
     }
 }
+
+// ── level14 ──
+impl From<crate::level14::Action> for w::Action {
+    fn from(a: crate::level14::Action) -> w::Action {
+        match a {
+            crate::level14::Action::Wait => w::Action::Wait,
+            crate::level14::Action::Move(d) => w::Action::Move(d.into()),
+            crate::level14::Action::Harvest => w::Action::Harvest,
+            crate::level14::Action::Store => w::Action::Store,
+            crate::level14::Action::Plant => w::Action::Plant,
+            crate::level14::Action::Water => w::Action::Water,
+        }
+    }
+}
+impl From<crate::level14::Dir> for w::Dir {
+    fn from(d: crate::level14::Dir) -> w::Dir {
+        match d {
+            crate::level14::Dir::North => w::Dir::North,
+            crate::level14::Dir::East => w::Dir::East,
+            crate::level14::Dir::South => w::Dir::South,
+            crate::level14::Dir::West => w::Dir::West,
+        }
+    }
+}
+impl From<w::Dir> for crate::level14::Dir {
+    fn from(d: w::Dir) -> crate::level14::Dir {
+        match d {
+            w::Dir::North => crate::level14::Dir::North,
+            w::Dir::East => crate::level14::Dir::East,
+            w::Dir::South => crate::level14::Dir::South,
+            w::Dir::West => crate::level14::Dir::West,
+        }
+    }
+}
+impl From<w::Tile> for crate::level14::Tile {
+    fn from(t: w::Tile) -> crate::level14::Tile {
+        match t {
+            w::Tile::Soil => crate::level14::Tile::Soil,
+            w::Tile::Crop => crate::level14::Tile::Crop,
+            w::Tile::Barn => crate::level14::Tile::Barn,
+            w::Tile::Stone => crate::level14::Tile::Stone,
+            w::Tile::Paddy => crate::level14::Tile::Paddy,
+            w::Tile::Water => crate::level14::Tile::Water,
+            w::Tile::Goblin => crate::level14::Tile::Goblin,
+            w::Tile::Plot => crate::level14::Tile::Plot,
+            w::Tile::Seed => crate::level14::Tile::Seed,
+            w::Tile::Sprout => crate::level14::Tile::Sprout,
+        }
+    }
+}
+impl From<w::Flood> for crate::level14::Flood {
+    fn from(t: w::Flood) -> crate::level14::Flood {
+        match t {
+            w::Flood::Low { turns_left } => crate::level14::Flood::Low { turns_left },
+            w::Flood::High { turns_left } => crate::level14::Flood::High { turns_left },
+            w::Flood::Calm => crate::level14::Flood::Calm,
+        }
+    }
+}
+
+impl From<w::Sight> for crate::level14::SightError {
+    fn from(e: w::Sight) -> crate::level14::SightError {
+        match e {
+            w::Sight::OffMap => crate::level14::SightError::OffMap,
+            w::Sight::TooFar => crate::level14::SightError::TooFar,
+        }
+    }
+}
