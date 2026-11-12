@@ -6,6 +6,18 @@
 - 시안: `design/crab-code-ui.excalidraw` (보드 A~E)
 - 미리보기: `design/preview/*.png` (Excalidraw 없이 볼 때, 다른 세션이 읽을 때)
 
+> **12:13 이후에 바뀐 것 (시안 A 와 4장 토큰은 그 전 화면 기준이다)**
+>
+> - 게임 화면(두 팩의 `view.gd`)이 16x16 **픽셀 아트**가 됐다. 그림은 팩마다 `art/sprites.py` 가 만든
+>   `view/assets/*.png` 이고, 효과 아이콘은 Kenney 1-Bit Pack. 정수 배율로만 키운다.
+> - 제목·버튼·칩·HUD 글꼴이 **갈무리11 픽셀 폰트** (`Palette.pixel_font()`, 크기는 `Palette.PIXEL_SIZE` = 12 의 배수).
+>   레슨 본문·출력·코드는 그대로 Pretendard·JetBrains Mono.
+> - `UiTheme.box()` 의 모서리가 **최대 4px** (넘겨받은 값의 절반), 버튼 아래에 3px 어두운 테두리 (`_pressable`).
+> - 게임팩이 바뀌면 작업 폴더의 예전 레벨 파일을 `levels-v<n>/` 으로 옮기고 출력 창에 알린다 (`ws.migrated`).
+>
+> 그래서 4장의 "글꼴·모서리" 는 6장 프롬프트에서 시작 전에 방향 (가)/(나) 를 정하고 진행한다.
+> 시안 A 는 지금 화면과 다르니 비교할 때는 새로 찍은 화면을 쓴다 (5장의 확인 명령).
+
 ## 1. 지금 화면 (보드 A)
 
 `host.tscn` 은 윗줄 + 2단이다. 왼쪽 40% 에 레슨, 작업 폴더 패널, 버튼 줄이 있고 오른쪽 60% 에 세계 패널(세계·타임라인·살펴보기·배너)과 출력 창이 있다.
@@ -31,6 +43,9 @@
 - **IDE 선택이 환경 변수뿐** (`CRAB_IDE`). 못 찾으면 환경 변수를 쓰라는 경고만 나온다.
 - **host 가 팩 글귀를 안다**: `_render_console` 이 "배달 완료", "밀물", "갈매기" 로 시작하는지 보고 색을 고른다.
 - **창이 좁을 때 대책이 없다**: IDE 옆에 반쪽으로 두는 게 기본 쓰임새인데 2단 고정이다.
+  게다가 `project.godot` 의 늘이기 설정(기준 1360×860, `canvas_items` + `expand`) 때문에 720 너비에서는 배치가 바뀌는 게 아니라
+  **화면 전체가 절반 크기로 줄어든다** (12:13 이후 확인). 픽셀 폰트는 정수가 아닌 배율에서 흐려진다.
+  좁은 창(C)을 하려면 늘이기 설정부터 바꿔야 한다 (예: `stretch/mode = disabled` 에 화면 배율만 맞추기, 또는 기준 크기를 줄이기).
 
 ## 2. 참고한 것
 
@@ -75,22 +90,36 @@ Crab Code 에 옮길 것은 네 가지다. 상태는 한 곳, 세계가 주인�
 | `ON_ACCENT` | `#1b1005` | 주황 버튼 글자. 6.2:1 |
 
 - 글자 크기는 22 / 17 / 15 / 13 / 12 다섯 단계. 코드는 JetBrains Mono 13.
-- 굵기는 Pretendard SemiBold 를 더한다 (제목·버튼·굵게). 글꼴 파일을 새로 넣어야 한다.
 - 간격은 4의 배수 (4·8·12·16·24). 패널 안쪽 16, 패널 사이 8.
-- 모서리는 칩 6, 버튼 8, 패널 12, 카드 14.
 - 버튼은 주(화면에 하나), 보조, 테두리, 위험. 모두 `SKY` 2px 포커스 링.
+
+글꼴과 모서리는 방향에 따라 다르다 (시작 전에 사용자가 고른다):
+
+| | (가) 깔끔한 UI + 픽셀 게임 화면 | (나) UI 도 픽셀 |
+|---|---|---|
+| 제목·버튼 글꼴 | Pretendard SemiBold (글꼴 파일 추가) | 갈무리11 (지금), 크기는 12 의 배수 (12·24) |
+| 본문·출력 | Pretendard Regular · JetBrains Mono | 같음 |
+| 모서리 | 칩 6, 버튼 8, 패널 12, 카드 14 | 0~4 (지금), 2px 테두리 |
+| 버튼 | 평평한 면 | 아래 3px 어두운 테두리 (지금) |
+| 글자 크기 단계 | 22 / 17 / 15 / 13 / 12 | 픽셀 글자는 24 / 12, 본문은 15 / 13 |
+
+어느 쪽이든 색 토큰(위 표)과 간격, 포커스 링은 같다.
+
+게임팩 화면(`packs/*/view/view.gd`)의 색은 **토큰으로 옮기지 않는다.** 픽셀 아트 팔레트라서 그 팩의 그림
+(`art/sprites.py`)과 짝을 이루고, 게임 본체의 `Palette` 로 옮기면 팩을 갈아끼울 때 그림과 색이 따로 논다.
+토큰 정리는 `host.gd`, `ui_theme.gd`, `markdown_view.gd` 의 UI 색만 한다.
 
 ## 5. 적용 순서
 
 단계마다 따로 커밋한다. 각 단계 뒤 `tests/ide_flow_test.gd` 를 돌리고 `CRAB_SHOT` 으로 화면을 찍어 확인한다.
 
-1. **토큰**: `palette.gd` 에 색 넷과 글자 크기 상수. `ui_theme.gd` 에 포커스 링, 주황 버튼 글자색, 테두리 버튼 변형. `host.gd` 와 두 `view.gd` 의 하드코딩 색을 `Palette` 로. 배치는 건드리지 않는다.
+1. **토큰**: `palette.gd` 에 색 넷과 글자 크기 상수. `ui_theme.gd` 에 포커스 링, 주황 버튼 글자색, 테두리 버튼 변형, 고른 방향 (가)/(나) 의 글꼴·모서리. `host.gd` 와 `markdown_view.gd` 의 하드코딩 UI 색을 `Palette` 로 (게임팩 `view.gd` 의 색은 그대로). 배치는 건드리지 않는다.
 2. **상태 바**: `_set_phase` 와 `_set_watch` 를 상태 바 하나로. `WorkspacePanel` 과 `Banner` 제거.
 3. **배치**: `host.tscn` 을 보드 B 로. 목표 카드 고정, 살펴보기 고정 칸, 출력과 나란히.
 4. **레슨 아래 줄**: 힌트 펼치기, 되돌리기 확인.
 5. **타임라인과 단축키**: 속도 고르기, Space, ←→, Home/End, 1~4, R, H, ⌘O, ⌘E, Enter.
 6. **문제 탭**: `r.diagnostics` 를 카드로.
-7. **좁은 창**: 가로 1000 미만에서 한 단 + 탭.
+7. **좁은 창**: 가로 1000 미만에서 한 단 + 탭. 먼저 `project.godot` 의 늘이기 설정을 바꿔 좁은 창에서 화면이 줄지 않고 배치가 바뀌게 한다.
 8. **성공 카드, 레벨 고르기, 설정** (IDE 고르기를 `user://host.json` 에 저장).
 
 팩과의 약속을 넓혀야 하는 것 (GDScript 만으로는 안 됨, 따로 결정):
@@ -101,8 +130,10 @@ Crab Code 에 옮길 것은 네 가지다. 상태는 한 곳, 세계가 주인�
 지켜야 할 것:
 
 - `view.gd` 약속 (`setup`, `time`, `selected`, `last_tick`, `frame_at`, `play_effects`, `celebrate`, `agent_count`, `describe_agent`, `agent_selected`) 은 그대로.
-- 테스트가 쓰는 `host.phase`, `host.result`, `host.files`, `host.pack`, `host.lesson()`, `host._first_error`, `host.setup_dialog` 는 그대로.
-- `CRAB_*` 환경 변수 동작은 그대로.
+- 게임팩 화면의 그림과 그리는 방식(16픽셀 격자, 정수 배율, nearest)은 그대로.
+- 테스트가 쓰는 `host.phase`, `host.result`, `host.files`, `host.pack`, `host.lesson()`, `host._first_error`, `host.setup_dialog`, `host.view`, `host.playing`, `host.run()`, `host._sync_timeline()` 는 그대로.
+- `CRAB_*` 환경 변수 동작은 그대로 (`CRAB_WORKSPACE`, `CRAB_PACK`, `CRAB_START_LEVEL`, `CRAB_GIT_NAME`, `CRAB_GIT_EMAIL`, `CRAB_IDE`, `CRAB_SHOT`, `CRAB_SHOT_DELAY`).
+- 처음 실행 창(작업 폴더 만들기)과 게임팩 업데이트 안내(`ws.migrated`)는 그대로 동작해야 한다.
 
 ## 6. 다른 세션에 줄 프롬프트
 
@@ -110,28 +141,43 @@ Crab Code 에 옮길 것은 네 가지다. 상태는 한 곳, 세계가 주인�
 crab-code 저장소의 게임 화면(game/)을 design/UI_REDESIGN.md 대로 고쳐 줘.
 
 먼저 읽을 것
-- design/UI_REDESIGN.md (문제, 개선안, 토큰, 적용 순서, 지켜야 할 것)
-- design/preview/A-current.png, B-wide.png, C-narrow.png, D-states.png, E-tokens.png (시안 그림)
-- game/host.tscn, game/scripts/host.gd, ui_theme.gd, palette.gd, game/packs/*/view/view.gd
+- design/UI_REDESIGN.md (맨 위의 "12:13 이후에 바뀐 것", 문제, 개선안, 토큰, 적용 순서, 지켜야 할 것)
+- design/preview/B-wide.png, C-narrow.png, D-states.png, E-tokens.png (시안 그림)
+  A-current.png 는 픽셀 아트 전의 화면이다. 지금 화면은 아래 확인 명령으로 직접 찍어서 본다.
+- game/host.tscn, game/scripts/host.gd, ui_theme.gd, palette.gd, markdown_view.gd, game/packs/*/view/view.gd
+
+시작하기 전에 (세 가지를 보여 주고 물어봐 줘. 답을 받기 전에는 고치지 않는다)
+1. git status. 스테이징됐거나 커밋 안 된 변경이 있으면, 내 변경과 섞이지 않게 먼저 커밋할지 / 새 브랜치에서 할지 묻는다.
+   (design/ 폴더는 이미 git 에 들어 있다. design/ 은 읽기만 하고 커밋에 넣지 않는다.)
+2. UI 방향: 게임 화면은 픽셀 아트로 둔다. 그 바깥 UI(제목·버튼·패널)는
+   (가) Pretendard SemiBold + 둥근 모서리 (칩 6·버튼 8·패널 12) 로 되돌릴지,
+   (나) 지금처럼 갈무리 픽셀 폰트 + 각진 모서리로 갈지. 4장 표를 보여 주고 고르게 한다.
+3. (가) 라면 Pretendard SemiBold 글꼴 파일을 넣어도 되는지. 안 되면 Regular 로만 진행.
 
 범위
 - 이번에는 문서 5장의 1~3단계만: 토큰 → 상태 바 → 배치. 4단계 이후는 하지 말고 끝에 남은 일로 적어 줘.
-- game/ 안의 GDScript 와 장면만 고친다. host/, godot-ext/, 게임팩의 Rust 크레이트와 레슨은 건드리지 않는다.
-- design/ 폴더와 Excalidraw 캔버스는 읽기만 한다.
-
-지킬 것
-- 문서 5장 "지켜야 할 것" 의 view.gd 약속, 테스트가 쓰는 host 의 이름들, CRAB_* 환경 변수.
-- 지금 스테이징된 변경이 있다. 시작 전에 git status 를 보여 주고, 내 변경과 섞이지 않게 어떻게 할지(먼저 커밋 / 새 브랜치) 물어봐 줘.
-- 글꼴 파일 추가(Pretendard SemiBold)는 하기 전에 물어봐 줘. 안 하면 Regular 로만 진행.
+- game/ 안의 GDScript 와 장면만 고친다. host/, godot-ext/, 게임팩의 Rust 크레이트·레슨·그림(art/, view/assets/)은 건드리지 않는다.
+- 게임팩 view.gd 의 색은 토큰으로 옮기지 않는다 (팩의 픽셀 아트 팔레트). view.gd 는 시안 B 의 "지나온 길·목표 칩" 처럼
+  세계 위에 덧그리는 것만 필요하면 고치고, 그림과 그리는 방식(16픽셀 격자·정수 배율)은 그대로 둔다.
 - 사건 kind, 목표 진행처럼 팩 출력 형식을 바꿔야 하는 것은 하지 않는다.
 
+지킬 것
+- 문서 5장 "지켜야 할 것" 전부: view.gd 약속, 테스트가 쓰는 host 의 이름들, CRAB_* 환경 변수,
+  처음 실행 창과 게임팩 업데이트 안내.
+
 진행 방식
-- 단계마다: 고치기 → 확인 → 커밋 하나. 커밋 메시지는 기존 기록처럼 한국어 한 줄.
-- 확인: cargo build 후
-  CRAB_WORKSPACE=/tmp/crab-ws godot --path game -s tests/ide_flow_test.gd
-  CRAB_WORKSPACE=/tmp/crab-ws CRAB_PACK=tidepool CRAB_START_LEVEL=3 CRAB_SHOT=/tmp/crab-shot.png godot --path game
-  찍은 화면을 직접 열어 시안과 비교하고, 1360×860 과 720×860 두 크기에서 글자 잘림·겹침이 없는지 본다.
-- 퍼즐 팩(51레벨, 장 있음)에서도 윗줄이 넘치지 않는지 CRAB_PACK=puzzle 로 한 번 찍어 본다.
+- 단계마다: 고치기 → 확인 → 커밋 하나. 커밋 메시지는 기존 기록처럼 한국어 한 줄. git add 는 바꾼 파일만 골라서 (git add -A 쓰지 않기).
+- 확인: 저장소 루트에서 cargo build 후, game/ 에서
+    for p in tidepool puzzle; do CRAB_PACK=$p CRAB_WORKSPACE=/tmp/crab-ws-$p godot --path . -s tests/ide_flow_test.gd; done
+  화면 찍기 (CRAB_GIT_NAME/EMAIL 이 없으면 "작업 폴더 만들기" 창이 화면을 덮는다):
+    CRAB_WORKSPACE=/tmp/crab-ws CRAB_GIT_NAME=t CRAB_GIT_EMAIL=t@localhost CRAB_PACK=tidepool CRAB_START_LEVEL=3 \
+      CRAB_SHOT=/tmp/crab-shot.png CRAB_SHOT_DELAY=20 godot --path . --resolution 1360x860
+  (새 작업 폴더의 첫 cargo build 가 몇 초 걸린다. 화면에 "cargo build 중" 이 보이면 CRAB_SHOT_DELAY 를 늘린다.)
+  같은 명령을 --resolution 720x860 으로도 찍고, CRAB_PACK=puzzle CRAB_START_LEVEL=20 으로도 찍는다 (장이 있는 팩에서 윗줄이 넘치지 않는지).
+  주의: 지금 늘이기 설정에서는 720 너비가 "화면 전체가 반으로 줄어든 모습" 으로 찍힌다 (1장 참고). 좁은 창은 7단계라 이번 범위가
+  아니니, 720 사진은 1~3단계가 그 상태를 더 나쁘게 만들지 않았는지만 본다.
+  찍은 화면을 직접 열어 시안과 비교하고, 글자 잘림·겹침이 없는지 본다.
+- 처음 실행 창도 한 번 확인: CRAB_TEST_SETUP=1 CRAB_WORKSPACE=/tmp/crab-ws-setup godot --path . -s tests/ide_flow_test.gd
 - 시안과 다르게 해야 하는 곳이 있으면 고치기 전에 이유와 함께 알려 줘.
 
 끝나면
