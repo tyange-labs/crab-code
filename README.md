@@ -47,6 +47,7 @@ godot --path game                        # 게임 실행
 | `CRAB_PACK`, `CRAB_START_LEVEL` | 시작할 게임팩과 레벨 번호 (개발용) |
 | `CRAB_GIT_NAME`, `CRAB_GIT_EMAIL` | 작업 폴더 커밋의 이름·이메일 (주면 처음 창을 건너뛴다) |
 | `CRAB_SHOT`, `CRAB_SHOT_DELAY` | 몇 초 뒤 화면을 PNG 로 찍고 끝내기 (개발용) |
+| `CRAB_UI_SCALE` | UI 배율 (기본: 화면 배율, 레티나 2). 화면 사진을 늘 같게 찍으려면 1 로 (개발용) |
 
 ## 테스트
 

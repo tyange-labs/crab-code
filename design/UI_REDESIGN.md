@@ -170,7 +170,7 @@ crab-code 저장소의 게임 화면(game/)을 design/UI_REDESIGN.md 대로 고�
 - 확인: 저장소 루트에서 cargo build 후, game/ 에서
     for p in tidepool puzzle; do CRAB_PACK=$p CRAB_WORKSPACE=/tmp/crab-ws-$p godot --path . -s tests/ide_flow_test.gd; done
   화면 찍기 (CRAB_GIT_NAME/EMAIL 이 없으면 "작업 폴더 만들기" 창이 화면을 덮는다):
-    CRAB_WORKSPACE=/tmp/crab-ws CRAB_GIT_NAME=t CRAB_GIT_EMAIL=t@localhost CRAB_PACK=tidepool CRAB_START_LEVEL=3 \
+    CRAB_UI_SCALE=1 CRAB_WORKSPACE=/tmp/crab-ws CRAB_GIT_NAME=t CRAB_GIT_EMAIL=t@localhost CRAB_PACK=tidepool CRAB_START_LEVEL=3 \
       CRAB_SHOT=/tmp/crab-shot.png CRAB_SHOT_DELAY=20 godot --path . --resolution 1360x860
   (새 작업 폴더의 첫 cargo build 가 몇 초 걸린다. 화면에 "cargo build 중" 이 보이면 CRAB_SHOT_DELAY 를 늘린다.)
   같은 명령을 --resolution 720x860 으로도 찍고, CRAB_PACK=puzzle CRAB_START_LEVEL=20 으로도 찍는다 (장이 있는 팩에서 윗줄이 넘치지 않는지).

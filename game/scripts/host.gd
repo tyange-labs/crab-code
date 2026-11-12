@@ -33,6 +33,11 @@ var playing := false
 var autoplay := true
 var speed_idx := 1
 var _marks: TimelineMarks
+## 좁은 창(논리 너비 NARROW_WIDTH 미만)이면 한 단으로: 세계 아래에 레슨·출력·문제·살펴보기 탭.
+const NARROW_WIDTH := 1000.0
+var narrow := false
+var _narrow_tab := "lesson"
+var _ui_scale := 1.0
 var show_solution := false
 var confirm_solution := false
 
@@ -56,8 +61,17 @@ enum MoreItem { OPEN_IDE, OPEN_FOLDER, COPY_COMMAND }
 func _ready() -> void:
 	theme = UiTheme.build()
 	_style_static_nodes()
+	for pair in [["lesson", "레슨"], ["output", "출력"], ["problems", "문제"], ["inspector", "살펴보기"]]:
+		var b := Button.new()
+		b.text = pair[1]
+		b.set_meta("tab", pair[0])
+		b.focus_mode = Control.FOCUS_NONE
+		b.theme_type_variation = "Chip"
+		b.pressed.connect(func(): _show_narrow_tab(pair[0]))
+		%NarrowTabs.add_child(b)
 	root = OS.get_environment("CRAB_WORKSPACE")
 	dev = root != ""
+	_setup_window()
 	var settings := _load_settings()
 	if root == "":
 		root = settings.get("workspace", core.default_workspace())
@@ -140,6 +154,69 @@ func _ready() -> void:
 		await get_tree().create_timer(delay.to_float() if delay.is_valid_float() else 3.0).timeout
 		get_viewport().get_texture().get_image().save_png(shot)
 		get_tree().quit()
+
+
+## UI 배율을 화면 배율(레티나 2, 보통 1)로 고정한다. 창 크기가 바뀌면 배치가 다시 흐른다.
+## (예전에는 기준 1360×860 을 창에 맞춰 늘여서, 좁은 창에서는 화면 전체가 줄어들었다.)
+func _setup_window() -> void:
+	var env := OS.get_environment("CRAB_UI_SCALE")
+	_ui_scale = env.to_float() if env.is_valid_float() else maxf(1.0, round(DisplayServer.screen_get_scale()))
+	var win := get_window()
+	win.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
+	win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+	if not dev and DisplayServer.get_name() != "headless":
+		# 논리 크기 1360×860 으로 열되, 화면에 들어가게 줄인다.
+		var usable := DisplayServer.screen_get_usable_rect(win.current_screen)
+		var want := (Vector2(1360, 860) * _ui_scale).min(Vector2(usable.size) * 0.92)
+		win.size = Vector2i(want)
+		win.position = usable.position + (usable.size - win.size) / 2
+	win.size_changed.connect(_on_window_resized)
+	_on_window_resized()
+
+
+func _on_window_resized() -> void:
+	var win := get_window()
+	var logical := (Vector2(win.size) / _ui_scale).floor()
+	if Vector2(win.content_scale_size) != logical:
+		win.content_scale_size = Vector2i(logical)
+	_apply_narrow(logical.x < NARROW_WIDTH)
+
+
+func _apply_narrow(on: bool) -> void:
+	if on == narrow and is_node_ready():
+		return
+	narrow = on
+	%Left.visible = not on
+	%NarrowTabs.visible = on
+	%Levels.visible = not on
+	%LevelPicker.custom_minimum_size.x = 180.0 if on else 320.0
+	%TabOutput.get_parent().visible = not on # 좁은 창에서는 아래 탭이 대신한다
+	%WorldPanel.size_flags_stretch_ratio = 1.3 if on else 2.4
+	%LessonPanel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if on:
+		%LessonPanel.reparent(%Bottom)
+		%Bottom.move_child(%LessonPanel, 0)
+	else:
+		%LessonPanel.reparent(%Left)
+		%Left.move_child(%LessonPanel, 0)
+		%LessonPanel.visible = true
+		%ConsolePanel.visible = true
+		%Inspector.visible = true
+	_show_narrow_tab(_narrow_tab)
+
+
+## 좁은 창의 탭: lesson | output | problems | inspector
+func _show_narrow_tab(tab: String) -> void:
+	_narrow_tab = tab
+	if not narrow:
+		return
+	%LessonPanel.visible = tab == "lesson"
+	%ConsolePanel.visible = tab in ["output", "problems"]
+	%Inspector.visible = tab == "inspector"
+	if tab in ["output", "problems"]:
+		_show_tab(tab)
+	for b in %NarrowTabs.get_children():
+		b.theme_type_variation = "ChipCurrent" if b.get_meta("tab") == tab else "Chip"
 
 
 func _style_static_nodes() -> void:
@@ -732,6 +809,8 @@ func _on_run_result(r: Dictionary) -> void:
 			where = "%s:%d · %s" % [String(_first_error.file).get_file(), _first_error.line, String(_first_error.message).split("\n")[0]]
 		phase = "failed"
 		_show_tab("problems")
+		if narrow:
+			_show_narrow_tab("problems")
 		_status("error", "컴파일 에러 %d개" % maxi(errors, 1), where, "error" if not _first_error.is_empty() else "")
 		if autoplay:
 			Sfx.play("fail")
