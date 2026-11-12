@@ -661,7 +661,7 @@ func _status(kind: String, title: String, detail := "", action := "") -> void:
 	var fg := Palette.TEXT
 	match kind:
 		"building":
-			bg = Palette.SKY.lerp(Color.WHITE, 0.86)
+			bg = Palette.SKY.darkened(0.78)
 			dot = Palette.SKY
 		"error", "failed":
 			bg = Palette.RED_BG
@@ -676,7 +676,7 @@ func _status(kind: String, title: String, detail := "", action := "") -> void:
 		"ready":
 			dot = Palette.GREEN
 	var sb := UiTheme.box(bg, 8, 14, 6)
-	sb.border_color = Palette.BORDER if kind in ["idle", "ready", "playing"] else bg.darkened(0.1)
+	sb.border_color = Palette.BORDER if kind in ["idle", "ready", "playing"] else bg.lightened(0.15)
 	sb.set_border_width_all(2)
 	%StatusBar.add_theme_stylebox_override("panel", sb)
 	%StatusDot.color = dot
@@ -1091,8 +1091,7 @@ func _log_compiler(output: String, warnings_only: bool) -> void:
 
 func _agent_hex(i: int) -> String:
 	var colors: Array = pack.get("colors", [Palette.hex(Palette.ACCENT)])
-	# 팩 색은 어두운 세계용이라 밝은 바탕의 글자로 쓸 때는 어둡게 한다.
-	return Palette.hex(Color(colors[i % colors.size()]).darkened(0.35))
+	return colors[i % colors.size()]
 
 
 func _agent_tag(tick: int, agent: int) -> String:
@@ -1266,7 +1265,7 @@ func _build_success_card() -> void:
 	var sb := UiTheme.box(Color(Palette.PANEL, 0.97), 8, 24, 18)
 	sb.border_color = Palette.GREEN
 	sb.set_border_width_all(2)
-	sb.shadow_color = Color(0.3, 0.2, 0.1, 0.25)
+	sb.shadow_color = Color(0, 0, 0, 0.5)
 	sb.shadow_size = 12
 	_success.add_theme_stylebox_override("panel", sb)
 	%ViewHost.add_child(_success)

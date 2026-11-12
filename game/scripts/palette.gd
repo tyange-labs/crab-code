@@ -1,52 +1,52 @@
 ## 게임 전체에서 쓰는 색과 글꼴.
 class_name Palette
 
-## 밝은 테마: 따뜻한 종이색 바탕에 짙은 갈색 글자.
-const BG := Color("#efe6d2")
-const PANEL := Color("#fffaf0")
-const PANEL_HI := Color("#f1e7d3")
-const EDITOR := Color("#f8f1e3")
-const CHROME := Color("#e8dcc4")
-const TEXT := Color("#2b2520")
-## 보조 글자. PANEL 위 7.0:1, PANEL_HI 위 6.1:1.
-const TEXT2 := Color("#5c5246")
-## 라벨·경로. PANEL 위 4.9:1, EDITOR 위 4.6:1.
-const TEXT3 := Color("#776b5c")
+## 어두운 SF 테마: 깊은 남색 바탕에 푸른 흰 글자, 청록 강조.
+const BG := Color("#070a14")
+const PANEL := Color("#0e1424")
+const PANEL_HI := Color("#1a2442")
+const EDITOR := Color("#0b101e")
+const CHROME := Color("#0a0e1a")
+const TEXT := Color("#dbe8ff")
+## 보조 글자. PANEL 위 8.4:1, PANEL_HI 위 6.9:1.
+const TEXT2 := Color("#9fb0d8")
+## 라벨·경로. PANEL 위 5.3:1, EDITOR 위 5.6:1.
+const TEXT3 := Color("#7f90ba")
 ## 예전 이름 (TEXT2·TEXT3 와 같다).
 const DIM := TEXT2
 const FAINT := TEXT3
 ## 1px·2px 선.
-const BORDER := Color("#d8c9ad")
-## 주황(ACCENT) 버튼 위 글자. 6.2:1.
-const ON_ACCENT := Color("#1b1005")
-const TOOLTIP := Color("#fffaf0")
-const ACCENT := Color("#f46a25")
-## 글자로 쓰는 주황 (ACCENT 는 밝은 바탕 위 글자로는 흐리다). PANEL 위 4.6:1.
-const ACCENT_TEXT := Color("#c2470e")
-const GREEN := Color("#1e7f46")
-const GREEN_BG := Color("#d9f0e0")
-const RED := Color("#c2283c")
-const RED_BG := Color("#f9dcdf")
-const WARN := Color("#9a6700")
-const SKY := Color("#1f6fbf")
-const CODE := Color("#9a3f0c")
-const CODE_BG := Color("#efe3cc")
+const BORDER := Color("#2b3a5e")
+## 강조색(ACCENT) 버튼 위 글자.
+const ON_ACCENT := Color("#04121a")
+const TOOLTIP := Color("#121a30")
+const ACCENT := Color("#35e0ff")
+## 글자로 쓰는 강조색 (어두운 바탕에서는 ACCENT 와 같다).
+const ACCENT_TEXT := Color("#35e0ff")
+const GREEN := Color("#52f59a")
+const GREEN_BG := Color("#0f3a2a")
+const RED := Color("#ff6b7a")
+const RED_BG := Color("#3a1520")
+const WARN := Color("#ffb347")
+const SKY := Color("#6cb8ff")
+const CODE := Color("#ffcf7a")
+const CODE_BG := Color("#1b2440")
 
 const GEM := {"red": Color("#ff5c7a"), "blue": Color("#4fb3ff")}
 
 # 코드 색칠 (레슨의 코드, 살펴보기 창)
-const SYN_KEYWORD := Color("#c2410c")
-const SYN_TYPE := Color("#0f766e")
-const SYN_COMMENT := Color("#857a6a")
-const SYN_STRING := Color("#4d7c0f")
-const SYN_NUMBER := Color("#7c3aed")
-const SYN_FUNC := Color("#1d4ed8")
+const SYN_KEYWORD := Color("#ffa86b")
+const SYN_TYPE := Color("#6fe0c0")
+const SYN_COMMENT := Color("#7f90ba")
+const SYN_STRING := Color("#b5e07a")
+const SYN_NUMBER := Color("#d9a8ff")
+const SYN_FUNC := Color("#8ec5ff")
 
 # 인라인 코드 상자
-const CODE_BOX := Color("#f0e5cf")
-const CODE_BOX_HOVER := Color("#e7d9bd")
-const CODE_BOX_LINE := Color("#ddcdae")
-const CODE_BOX_LINE_HOVER := Color("#cfbd9a")
+const CODE_BOX := Color("#1a2442")
+const CODE_BOX_HOVER := Color("#243258")
+const CODE_BOX_LINE := Color("#2b3a5e")
+const CODE_BOX_LINE_HOVER := Color("#3b4f80")
 
 # 글자 크기 (본문 Pretendard / 코드 JetBrains Mono / 픽셀 갈무리11)
 const SIZE_BODY := 15

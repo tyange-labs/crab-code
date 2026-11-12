@@ -59,19 +59,32 @@ static func build() -> Theme:
 	t.set_font_size("font_size", "OptionButton", Palette.PIXEL_SIZE)
 	t.set_font("font", "PopupMenu", Palette.pixel_font())
 	t.set_font_size("font_size", "PopupMenu", Palette.PIXEL_SIZE)
+	for kind in ["OptionButton", "MenuButton", "CheckButton"]:
+		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+			t.set_color(c, kind, Palette.TEXT)
+		t.set_color("font_disabled_color", kind, Palette.TEXT3)
+	for c in ["font_color", "font_hover_color", "font_accelerator_color"]:
+		t.set_color(c, "PopupMenu", Palette.TEXT)
+	t.set_color("font_disabled_color", "PopupMenu", Palette.TEXT3)
+	var popup_bg := box(Palette.PANEL, 6, 6, 6)
+	popup_bg.border_color = Palette.BORDER
+	popup_bg.set_border_width_all(2)
+	t.set_stylebox("panel", "PopupMenu", popup_bg)
+	var popup_hover := box(Palette.PANEL_HI, 4, 6, 3)
+	t.set_stylebox("hover", "PopupMenu", popup_hover)
 	t.set_type_variation("PixelTitle", "Label")
 	t.set_font("font", "PixelTitle", Palette.pixel_font(true))
 	t.set_font_size("font_size", "PixelTitle", Palette.PIXEL_SIZE * 2)
 
 	# 버튼 (아래쪽에 2px 그림자 테두리를 둬서 눌리는 느낌)
 	t.set_stylebox("normal", "Button", sprite_box("res://assets/ui_btn.png"))
-	t.set_stylebox("hover", "Button", sprite_box("res://assets/ui_btn.png", Color(1.08, 1.08, 1.08)))
+	t.set_stylebox("hover", "Button", sprite_box("res://assets/ui_btn.png", Color(1.25, 1.25, 1.25)))
 	t.set_stylebox("pressed", "Button", sprite_box("res://assets/ui_btn_down.png"))
-	t.set_stylebox("disabled", "Button", box(Palette.PANEL_HI.lightened(0.3), 8, 16, 8))
+	t.set_stylebox("disabled", "Button", box(Palette.PANEL_HI.darkened(0.3), 8, 16, 8))
 	t.set_stylebox("focus", "Button", focus_ring())
 	t.set_color("font_color", "Button", Palette.TEXT)
 	t.set_color("font_hover_color", "Button", Palette.TEXT)
-	t.set_color("font_pressed_color", "Button", Color("#fff3e0"))
+	t.set_color("font_pressed_color", "Button", Palette.ACCENT)
 	t.set_color("font_focus_color", "Button", Palette.TEXT)
 	t.set_color("font_disabled_color", "Button", Palette.DIM)
 
@@ -80,7 +93,7 @@ static func build() -> Theme:
 	t.set_stylebox("normal", "PrimaryButton", _pressable(Palette.ACCENT))
 	t.set_stylebox("hover", "PrimaryButton", _pressable(Palette.ACCENT.lightened(0.12)))
 	t.set_stylebox("pressed", "PrimaryButton", box(Palette.ACCENT.darkened(0.15), 8, 16, 8))
-	t.set_stylebox("disabled", "PrimaryButton", box(Palette.ACCENT.lightened(0.45), 8, 16, 8))
+	t.set_stylebox("disabled", "PrimaryButton", box(Palette.ACCENT.darkened(0.5), 8, 16, 8))
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		t.set_color(c, "PrimaryButton", Palette.ON_ACCENT)
 	t.set_color("font_disabled_color", "PrimaryButton", Palette.ON_ACCENT.lightened(0.3))
@@ -92,7 +105,7 @@ static func build() -> Theme:
 	outline.content_margin_right = 14
 	outline.content_margin_top = 7
 	outline.content_margin_bottom = 7
-	var outline_hover := sprite_box("res://assets/ui_panel.png", Color(0.93, 0.9, 0.84))
+	var outline_hover := sprite_box("res://assets/ui_panel.png", Color(1.5, 1.5, 1.5))
 	outline_hover.content_margin_left = 14
 	outline_hover.content_margin_right = 14
 	outline_hover.content_margin_top = 7
@@ -107,7 +120,7 @@ static func build() -> Theme:
 	# 위험한 동작 (되돌리기 등)
 	t.set_type_variation("DangerButton", "Button")
 	t.set_stylebox("normal", "DangerButton", _pressable(Palette.RED_BG))
-	t.set_stylebox("hover", "DangerButton", _pressable(Palette.RED_BG.darkened(0.05)))
+	t.set_stylebox("hover", "DangerButton", _pressable(Palette.RED_BG.lightened(0.1)))
 	t.set_stylebox("pressed", "DangerButton", box(Palette.RED_BG.darkened(0.15), 8, 16, 8))
 	t.set_color("font_color", "DangerButton", Palette.RED)
 	t.set_color("font_hover_color", "DangerButton", Palette.RED)
@@ -117,7 +130,7 @@ static func build() -> Theme:
 		t.set_type_variation(kind, "Button")
 	var chip := func(kind: String, bg: Color, fg: Color) -> void:
 		t.set_stylebox("normal", kind, box(bg, 6, 9, 3))
-		t.set_stylebox("hover", kind, box(bg.darkened(0.06), 6, 9, 3))
+		t.set_stylebox("hover", kind, box(bg.lightened(0.12), 6, 9, 3))
 		t.set_stylebox("pressed", kind, box(bg.darkened(0.1), 6, 9, 3))
 		t.set_color("font_color", kind, fg)
 		t.set_color("font_hover_color", kind, fg)
