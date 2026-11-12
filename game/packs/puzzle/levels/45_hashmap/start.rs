@@ -2,7 +2,7 @@
 // 저장하면 Crab Code 게임 창에서 바로 실행돼요. 터미널에서는: cargo run --bin hashmap
 
 #[allow(unused_imports)]
-use puzzle::prelude::*;
+use puzzle::level45::*;
 
 use std::collections::HashMap;
 

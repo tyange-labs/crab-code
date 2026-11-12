@@ -20,6 +20,8 @@ pub struct Level {
     pub hint: String,
     pub start: String,
     pub solution: String,
+    /// 처음 코드가 일부러 내는 컴파일 에러 코드 (예: "E0384"). 그 에러를 읽고 고치는 레벨.
+    pub start_error: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -102,6 +104,7 @@ pub fn load(dir: &Path) -> Result<Pack, String> {
             hint: read(&d.join("hint.md")).unwrap_or_default().trim().to_string(),
             start: read(&d.join("start.rs"))?,
             solution: read(&d.join("solution.rs")).unwrap_or_default(),
+            start_error: read(&d.join("start_error.txt")).ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
         });
     }
     Ok(Pack { id, crate_name, dir: dir.to_path_buf(), meta, levels })

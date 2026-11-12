@@ -2,7 +2,7 @@
 // 저장하면 Crab Code 게임 창에서 바로 실행돼요. 터미널에서는: cargo run --bin param
 
 #[allow(unused_imports)]
-use puzzle::prelude::*;
+use puzzle::level5::*;
 
 // n칸 앞으로 걷는 함수
 fn walk(n: u32) {

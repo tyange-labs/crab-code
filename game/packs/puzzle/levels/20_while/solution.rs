@@ -2,7 +2,7 @@
 // 저장하면 Crab Code 게임 창에서 바로 실행돼요. 터미널에서는: cargo run --bin while
 
 #[allow(unused_imports)]
-use puzzle::prelude::*;
+use puzzle::level20::*;
 
 fn main() {
     while front_is_clear() {

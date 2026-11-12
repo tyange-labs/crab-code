@@ -49,6 +49,22 @@ pub fn verify_pack(pack_dir: &Path, seeds: u64) -> bool {
         if out["won"].as_bool().unwrap_or(false) {
             notes.push("시작 코드가 그대로 통과해 버림".into());
         }
+        let compiled = out["compiled"].as_bool().unwrap_or(false);
+        match &level.start_error {
+            // 일부러 컴파일 에러를 내는 레벨: 바로 그 에러여야 한다 (다른 에러로 막히면 레슨이 엉뚱해진다).
+            Some(code) => {
+                let output = out["output"].as_str().unwrap_or("");
+                if compiled || !output.contains(&format!("error[{code}]")) {
+                    let got: Vec<&str> = output.lines().filter(|l| l.starts_with("error")).take(2).collect();
+                    notes.push(format!("시작 코드가 {code} 에러를 내지 않음 (나온 것: {})", if compiled { "컴파일 성공".to_string() } else { got.join(" / ") }));
+                }
+            }
+            None if !compiled => notes.push(format!(
+                "시작 코드가 컴파일되지 않음 (일부러라면 start_error.txt 에 에러 코드를 적어 주세요)\n{}",
+                out["output"].as_str().unwrap_or("")
+            )),
+            None => {}
+        }
         if notes.is_empty() {
             println!("ok    {:<10} {}  (정답 최대 {}틱, {}줄)", level.id, level.title, worst, run::code_lines(&level.solution));
         } else {

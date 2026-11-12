@@ -4,5 +4,5 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let level = args.get(1).cloned().unwrap_or_default();
     let seed = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(1);
-    puzzle::preview(&level, seed);
+    puzzle::__preview(&level, seed);
 }
