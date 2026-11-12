@@ -17,6 +17,7 @@ pub mod level5;
 pub mod level6;
 pub mod level7;
 pub mod level8;
+pub mod level9;
 
 mod engine;
 

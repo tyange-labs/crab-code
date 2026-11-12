@@ -1,0 +1,1 @@
+`Job::Tend` 일 때는 발밑이 `Plot` 이면 심고, `Seed` 면 물 주고, `Crop` 이면 거두면서 `self.job = Job::Deliver`. 걸어갈 곳은 `view.crop_dir().or(view.plot_dir())`. `Job::Deliver` 일 때는 `barn_dir()` 로 가다가 창고에서 `Store` 하고 `self.job = Job::Tend` 로 돌아와요.

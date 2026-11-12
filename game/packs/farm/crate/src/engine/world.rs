@@ -506,6 +506,27 @@ pub const SPECS: &[Spec] = &[
         respawn: false,
         reach: false,
     },
+    Spec {
+        id: "village",
+        map: &[
+            "###############",
+            "#N............#",
+            "#.............#",
+            "#.p.p.p.p.p.p.#",
+            "#.............#",
+            "#.p.p.p.p.p.p.#",
+            "#.............#",
+            "###############",
+        ],
+        farmers: 3,
+        goal: 9,
+        max_ticks: 170,
+        smell: u32::MAX,
+        flood: None,
+        random_crop: 0,
+        respawn: false,
+        reach: false,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();
