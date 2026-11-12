@@ -42,6 +42,14 @@ var _slider_lock := false
 var _watch_clock := 0.0
 var _queued_run := false
 var _first_error: Dictionary = {}
+var _build_started := 0
+## 상태 바의 주 버튼이 지금 하는 일: "" | "ide" | "run" | "error" | "next" | "replay"
+var _action := ""
+## 상태 바 상세 글을 잠깐 바꿔 둔 경우 (IDE 를 열었다 등), 원래 글로 돌아갈 시각.
+var _flash_until := 0
+var _detail := ""
+
+enum MoreItem { OPEN_IDE, OPEN_FOLDER, COPY_COMMAND }
 
 
 func _ready() -> void:
@@ -73,18 +81,16 @@ func _ready() -> void:
 				break
 		select_level(target))
 
-	%Run.pressed.connect(func(): run(true))
 	%Hint.pressed.connect(func(): _log("힌트: " + lesson().hint.replace("`", ""), "warn"))
 	%Solution.pressed.connect(_toggle_solution)
 	%Reset.pressed.connect(_reset_level)
 	%Sound.pressed.connect(_toggle_sound)
-	%Next.pressed.connect(func(): select_level(level + 1))
-	%OpenIde.pressed.connect(_open_ide)
-	%OpenFolder.pressed.connect(func(): OS.shell_open(root))
-	%CopyCommand.pressed.connect(func():
-		DisplayServer.clipboard_set("cd \"%s\" && cargo run --bin %s" % [root, lesson().id])
-		_set_watch("터미널 명령을 복사했어요. 터미널에서 돌리면 결과가 글로 나와요.", Palette.DIM))
-	%ShowError.pressed.connect(func(): _open_ide(_first_error))
+	%StatusAction.pressed.connect(_on_status_action)
+	var more: PopupMenu = %More.get_popup()
+	more.add_item("IDE 로 열기", MoreItem.OPEN_IDE)
+	more.add_item("작업 폴더 열기", MoreItem.OPEN_FOLDER)
+	more.add_item("터미널 명령 복사 (cargo run)", MoreItem.COPY_COMMAND)
+	more.id_pressed.connect(_on_more)
 	%Play.pressed.connect(_toggle_play)
 	%Back.pressed.connect(func(): _step_by(-1))
 	%Forward.pressed.connect(func(): _step_by(1))
@@ -121,7 +127,7 @@ func _ready() -> void:
 func _style_static_nodes() -> void:
 	%BrandName.theme_type_variation = "PixelTitle"
 	%LessonTitle.theme_type_variation = "PixelTitle"
-	for l in [%Progress, %ChapterName, %FileTitle, %ConsoleLabel, %TickLabel]:
+	for l in [%Progress, %ChapterName, %ConsoleLabel, %TickLabel, %StatusTitle]:
 		l.add_theme_font_override("font", Palette.pixel_font())
 	%BrandSub.add_theme_color_override("font_color", Palette.DIM)
 	%BrandSub.add_theme_font_size_override("font_size", 12)
@@ -130,23 +136,13 @@ func _style_static_nodes() -> void:
 
 	%Progress.add_theme_color_override("font_color", Palette.GREEN)
 	%Progress.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
-	%BannerText.callouts = false
-	%Run.theme_type_variation = "PrimaryButton"
-	%FileTitle.add_theme_color_override("font_color", Palette.DIM)
-	%FileTitle.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
+	%StatusTitle.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
+	%StatusDetail.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+	%StatusDetail.add_theme_color_override("font_color", Palette.TEXT2)
 	%FileName.add_theme_font_override("font", Palette.code_font())
-	%FileName.add_theme_font_size_override("font_size", 16)
+	%FileName.add_theme_font_size_override("font_size", Palette.SIZE_CODE)
 	%FileName.add_theme_color_override("font_color", Palette.CODE)
-	%FilePath.add_theme_font_override("font", Palette.code_font())
-	%FilePath.add_theme_font_size_override("font_size", 12)
-	%FilePath.add_theme_color_override("font_color", Palette.FAINT)
-	%WatchStatus.add_theme_font_size_override("font_size", 13)
-	%GitStatus.add_theme_font_override("font", Palette.code_font())
-	%GitStatus.add_theme_font_size_override("font_size", 12)
-	%GitStatus.add_theme_color_override("font_color", Palette.DIM)
-	%WorkspacePanel.add_theme_stylebox_override("panel", UiTheme.box(Palette.EDITOR, 12, 16, 14))
-	for b in [%OpenIde, %OpenFolder, %CopyCommand]:
-		b.add_theme_font_size_override("font_size", 13)
+	%More.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%TickLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%TickLabel.add_theme_color_override("font_color", Palette.DIM)
 	%ConsoleLabel.add_theme_color_override("font_color", Palette.DIM)
@@ -403,22 +399,85 @@ func _render_lesson() -> void:
 
 func _render_workspace() -> void:
 	var l := lesson()
-	%FileName.text = l.file
-	%FilePath.text = root
-	%FilePath.tooltip_text = files.get(l.id, "")
+	%FileName.text = String(l.file).get_file()
+	var tip := "%s\n작업 폴더: %s" % [files.get(l.id, l.file), root]
 	var commit = JsonUtil.parse(core.last_commit(root))
 	if commit is Dictionary:
-		%GitStatus.text = "git %s  %s  (%s)" % [commit.hash, commit.subject, commit.when]
+		tip += "\n마지막 커밋: %s %s (%s)" % [commit.hash, commit.subject, commit.when]
 	elif not core.git_available():
-		%GitStatus.text = "git 이 없어서 기록을 남기지 못해요"
-	else:
-		%GitStatus.text = ""
-	_set_watch("저장을 기다리는 중이에요. IDE 에서 저장하면 바로 빌드하고 실행해요.", Palette.DIM)
+		tip += "\ngit 이 없어서 기록을 남기지 못해요"
+	%FileName.tooltip_text = tip
+	if phase in ["idle", ""] and result.is_empty():
+		_status("idle", "저장을 기다리는 중", "IDE 에서 저장하면 바로 빌드하고 실행해요", "ide")
 
 
-func _set_watch(text: String, color: Color) -> void:
-	%WatchStatus.text = text
-	%WatchStatus.add_theme_color_override("font_color", color)
+## 상태 바 상세 글을 잠깐 바꾼다 (4초 뒤 원래 글로).
+func _flash(text: String) -> void:
+	%StatusDetail.text = text
+	_flash_until = Time.get_ticks_msec() + 4000
+
+
+## 상태 바 하나에 지금 상태를 보여 준다.
+## kind: idle | ready | building | error | playing | won | failed. action: 주 버튼 ("" 이면 숨김).
+func _status(kind: String, title: String, detail := "", action := "") -> void:
+	var bg := Palette.PANEL
+	var dot := Palette.TEXT3
+	var fg := Palette.TEXT
+	match kind:
+		"building":
+			bg = Palette.SKY.darkened(0.78)
+			dot = Palette.SKY
+		"error", "failed":
+			bg = Palette.RED_BG
+			dot = Palette.RED
+			fg = Palette.RED
+		"playing":
+			dot = Palette.ACCENT
+		"won":
+			bg = Palette.GREEN_BG
+			dot = Palette.GREEN
+			fg = Palette.GREEN
+		"ready":
+			dot = Palette.GREEN
+	var sb := UiTheme.box(bg, 8, 14, 6)
+	sb.border_color = Palette.BORDER if kind in ["idle", "ready", "playing"] else bg.lightened(0.15)
+	sb.set_border_width_all(2)
+	%StatusBar.add_theme_stylebox_override("panel", sb)
+	%StatusDot.color = dot
+	%StatusTitle.text = title
+	%StatusTitle.add_theme_color_override("font_color", fg)
+	_detail = detail
+	if Time.get_ticks_msec() >= _flash_until:
+		%StatusDetail.text = detail
+	_action = action
+	var labels := {"ide": "IDE 로 열기", "run": "실행 F5", "error": "IDE 에서 보기", "next": "다음 레벨", "replay": "다시 보기"}
+	%StatusAction.visible = action != ""
+	%StatusAction.text = labels.get(action, "")
+	%StatusAction.theme_type_variation = "PrimaryButton" if action in ["ide", "next", "run"] else ("DangerButton" if action == "error" else "OutlineButton")
+
+
+func _on_more(id: int) -> void:
+	if id == MoreItem.OPEN_IDE:
+		_open_ide()
+	elif id == MoreItem.OPEN_FOLDER:
+		OS.shell_open(root)
+	elif id == MoreItem.COPY_COMMAND:
+		DisplayServer.clipboard_set("cd \"%s\" && cargo run --bin %s" % [root, lesson().id])
+		_flash("터미널 명령을 복사했어요. 터미널에서 돌리면 결과가 글로 나와요.")
+
+
+func _on_status_action() -> void:
+	match _action:
+		"ide":
+			_open_ide()
+		"run":
+			run(true)
+		"error":
+			_open_ide(_first_error)
+		"next":
+			select_level(level + 1)
+		"replay":
+			_toggle_play()
 
 
 # ── IDE ─────────────────────────────────────────────────────────
@@ -436,11 +495,11 @@ func _open_ide(at: Dictionary = {}) -> void:
 		"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"]
 	for cmd in candidates:
 		if cmd != "" and OS.execute(cmd, [root, "-g", target]) == 0:
-			_set_watch("IDE 에서 열었어요. 고치고 저장하면 바로 실행돼요.", Palette.DIM)
+			_flash("IDE 에서 열었어요. 고치고 저장하면 바로 실행돼요.")
 			return
 	# IDE 명령을 못 찾으면 운영체제가 정한 프로그램으로 파일을 연다.
 	OS.shell_open(file)
-	_set_watch("VS Code 명령(code)을 찾지 못해서 기본 프로그램으로 열었어요. CRAB_IDE 로 IDE 명령을 정할 수 있어요.", Palette.WARN)
+	_flash("VS Code 명령(code)을 못 찾아 기본 프로그램으로 열었어요. CRAB_IDE 로 IDE 명령을 정할 수 있어요.")
 
 
 # ── 실행 ─────────────────────────────────────────────────────────
@@ -456,8 +515,8 @@ func run(play: bool) -> void:
 		return
 	autoplay = play
 	playing = false
+	_build_started = Time.get_ticks_msec()
 	_set_phase("building")
-	_set_watch("cargo 로 빌드하는 중...", Palette.SKY)
 	if play:
 		Sfx.play("compile")
 	_run_level = lesson().id
@@ -468,6 +527,11 @@ func _process(delta: float) -> void:
 	var out := core.poll_run()
 	if out != "":
 		_on_run_result(JsonUtil.parse(out))
+	if phase == "building":
+		%StatusTitle.text = "cargo build 중… %.1f초" % ((Time.get_ticks_msec() - _build_started) / 1000.0)
+	if _flash_until > 0 and Time.get_ticks_msec() >= _flash_until:
+		_flash_until = 0
+		%StatusDetail.text = _detail
 
 	_watch_clock += delta
 	if _watch_clock >= WATCH_INTERVAL and not pack.is_empty():
@@ -521,12 +585,12 @@ func _on_run_result(r: Dictionary) -> void:
 			if d.level == "error":
 				_first_error = d
 				break
-		var where := ""
+		var errors: int = r.diagnostics.filter(func(d): return d.level == "error").size()
+		var where := "아래 출력 창의 rustc 메시지를 읽어 보세요"
 		if not _first_error.is_empty():
-			where = " `%s:%d`" % [String(_first_error.file).get_file(), _first_error.line]
-		_set_phase("failed", "컴파일 에러%s. 아래 메시지를 읽고 IDE 에서 고쳐 보세요." % where)
-		%ShowError.visible = not _first_error.is_empty()
-		_set_watch("저장하면 다시 빌드해요.", Palette.RED)
+			where = "%s:%d · %s" % [String(_first_error.file).get_file(), _first_error.line, String(_first_error.message).split("\n")[0]]
+		phase = "failed"
+		_status("error", "컴파일 에러 %d개" % maxi(errors, 1), where, "error" if not _first_error.is_empty() else "")
 		if autoplay:
 			Sfx.play("fail")
 		return
@@ -538,13 +602,11 @@ func _on_run_result(r: Dictionary) -> void:
 		for log in r.logs:
 			_log(log.text, "bad" if log.kind == "stderr" else "")
 		_set_phase("failed", r.message)
-		_set_watch("저장하면 다시 실행해요.", Palette.RED)
 		_sync_timeline()
 		return
 	result = r
 	view.setup(r.map, r.frames)
 	_shown_tick = -1
-	_set_watch("빌드 성공. 저장하면 다시 실행해요.", Palette.GREEN)
 	if autoplay:
 		playing = true
 		%Play.text = "일시정지"
@@ -574,10 +636,13 @@ func _finish_run() -> void:
 	elif not rec.get("better", false):
 		var best: Dictionary = progress.get(lesson().id, {}).get("best", {})
 		note = " · 최고 %d%s, %d줄" % [best.get("ticks", 0), unit, best.get("lines", 0)]
-	_set_phase("won", "성공! **%d%s** · 코드 **%d줄**%s" % [stats.get("ticks", 0), unit, stats.get("lines", 0), note])
+	var detail := note.replace("**", "").trim_prefix(" · ")
 	var commit = rec.get("commit")
 	if commit is Dictionary and commit.get("ok", false) and commit.get("hash", "") != "":
-		_log("git 에 커밋했어요: %s %s" % [commit.hash, commit.message], "good")
+		detail += ("" if detail == "" else " · ") + "git %s 에 커밋" % commit.hash
+	phase = "won"
+	var last: bool = level + 1 >= pack.levels.size()
+	_status("won", "성공! %d%s · 코드 %d줄" % [stats.get("ticks", 0), unit, stats.get("lines", 0)], detail, "" if last else "next")
 	_render_lesson()
 	_render_workspace()
 	_render_console(view.last_tick())
@@ -585,35 +650,29 @@ func _finish_run() -> void:
 	Sfx.play("win")
 
 
+## phase 를 바꾸고 상태 바에 보여 준다. (테스트가 phase 를 본다: idle | building | ready | won | failed)
 func _set_phase(p: String, message := "") -> void:
 	phase = p
-	%Run.text = "빌드 중..." if p == "building" else "실행 (F5)"
-	%Run.disabled = p == "building"
-	%Next.visible = p == "won" and level + 1 < pack.get("levels", []).size()
-	%ShowError.visible = false
-	var bg := Palette.PANEL_HI
-	var color := Palette.TEXT
-	var text := ""
 	match p:
 		"failed":
-			bg = Palette.RED_BG
-			color = Palette.RED
-			text = message
+			_status("failed", "실패", message, "replay" if not result.is_empty() else "")
 		"won":
-			bg = Palette.GREEN_BG
-			color = Palette.GREEN
-			text = message
+			_status("won", message)
 		"building":
-			color = Palette.DIM
-			text = "`cargo build` 중..."
+			_status("building", "cargo build 중…", "끝나면 바로 재생해요" if autoplay else "처음 모습을 준비해요")
 		"ready":
-			color = Palette.DIM
-			text = "재생 중이에요. 결과는 타임라인 끝에서 나와요."
+			_status("playing", _playing_title(), "결과는 타임라인 끝에서 나와요")
 		_:
-			text = _goal_text()
-	%Banner.add_theme_stylebox_override("panel", UiTheme.box(bg, 10, 14, 10))
-	%BannerText.base_color = color
-	%BannerText.markdown = text
+			if result.is_empty():
+				_status("idle", "저장을 기다리는 중", "IDE 에서 저장하면 바로 빌드하고 실행해요", "ide")
+			else:
+				_status("ready", "준비됐어요", "실행(F5)하면 재생해요 · IDE 에서 저장해도 돼요", "run")
+
+
+func _playing_title() -> String:
+	if not view:
+		return "재생 중"
+	return "재생 중 · %s %d / %d" % [pack.get("tick", "틱"), int(floor(view.time + 0.0001)), view.last_tick()]
 
 
 func _goal_text() -> String:
@@ -697,6 +756,8 @@ func _sync_timeline() -> void:
 	_slider_lock = false
 	var tick := int(floor(view.time + 0.0001))
 	%TickLabel.text = "%d / %d" % [tick, view.last_tick()]
+	if tick != _shown_tick and phase == "ready":
+		%StatusTitle.text = _playing_title()
 	if tick != _shown_tick:
 		if playing and tick > _shown_tick:
 			for t in range(maxi(_shown_tick + 1, 1), tick + 1):

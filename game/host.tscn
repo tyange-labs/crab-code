@@ -90,6 +90,47 @@ size_flags_vertical = 4
 focus_mode = 0
 text = "소리 켜짐"
 
+[node name="StatusBar" type="PanelContainer" parent="Margin/Root"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="Margin/Root/StatusBar"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="StatusDot" type="ColorRect" parent="Margin/Root/StatusBar/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="StatusTitle" type="Label" parent="Margin/Root/StatusBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="StatusDetail" type="Label" parent="Margin/Root/StatusBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text_overrun_behavior = 3
+
+[node name="FileName" type="Label" parent="Margin/Root/StatusBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 0
+
+[node name="More" type="MenuButton" parent="Margin/Root/StatusBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "작업 폴더"
+text = "⋯"
+
+[node name="StatusAction" type="Button" parent="Margin/Root/StatusBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+
 [node name="Body" type="HBoxContainer" parent="Margin/Root"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -130,72 +171,9 @@ layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("3_md")
 
-[node name="WorkspacePanel" type="PanelContainer" parent="Margin/Root/Body/Left"]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="VBox" type="VBoxContainer" parent="Margin/Root/Body/Left/WorkspacePanel"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="FileTitle" type="Label" parent="Margin/Root/Body/Left/WorkspacePanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "지금 고칠 파일"
-
-[node name="FileName" type="Label" parent="Margin/Root/Body/Left/WorkspacePanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text_overrun_behavior = 3
-
-[node name="FilePath" type="Label" parent="Margin/Root/Body/Left/WorkspacePanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text_overrun_behavior = 3
-
-[node name="OpenRow" type="HBoxContainer" parent="Margin/Root/Body/Left/WorkspacePanel/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="OpenIde" type="Button" parent="Margin/Root/Body/Left/WorkspacePanel/VBox/OpenRow"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 0
-text = "IDE 로 열기"
-
-[node name="OpenFolder" type="Button" parent="Margin/Root/Body/Left/WorkspacePanel/VBox/OpenRow"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 0
-text = "폴더 열기"
-
-[node name="CopyCommand" type="Button" parent="Margin/Root/Body/Left/WorkspacePanel/VBox/OpenRow"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 0
-tooltip_text = "터미널에서 직접 돌려 볼 명령을 복사해요"
-text = "cargo run 복사"
-
-[node name="WatchStatus" type="Label" parent="Margin/Root/Body/Left/WorkspacePanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-autowrap_mode = 3
-
-[node name="GitStatus" type="Label" parent="Margin/Root/Body/Left/WorkspacePanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text_overrun_behavior = 3
-
 [node name="Buttons" type="HBoxContainer" parent="Margin/Root/Body/Left"]
 layout_mode = 2
 theme_override_constants/separation = 8
-
-[node name="Run" type="Button" parent="Margin/Root/Body/Left/Buttons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 40)
-layout_mode = 2
-focus_mode = 0
-text = "실행 (F5)"
 
 [node name="Hint" type="Button" parent="Margin/Root/Body/Left/Buttons"]
 unique_name_in_owner = true
@@ -295,34 +273,6 @@ layout_mode = 2
 bbcode_enabled = true
 fit_content = true
 selection_enabled = true
-
-[node name="Banner" type="PanelContainer" parent="Margin/Root/Body/Right/WorldPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="HBox" type="HBoxContainer" parent="Margin/Root/Body/Right/WorldPanel/VBox/Banner"]
-layout_mode = 2
-
-[node name="BannerText" type="Control" parent="Margin/Root/Body/Right/WorldPanel/VBox/Banner/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-script = ExtResource("3_md")
-
-[node name="ShowError" type="Button" parent="Margin/Root/Body/Right/WorldPanel/VBox/Banner/HBox"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-focus_mode = 0
-text = "IDE 에서 보기"
-
-[node name="Next" type="Button" parent="Margin/Root/Body/Right/WorldPanel/VBox/Banner/HBox"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-focus_mode = 0
-text = "다음 레벨"
 
 [node name="ConsolePanel" type="PanelContainer" parent="Margin/Root/Body/Right"]
 layout_mode = 2
