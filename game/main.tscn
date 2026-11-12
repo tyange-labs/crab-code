@@ -70,6 +70,13 @@ layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 5
 
+[node name="Mode" type="Button" parent="Margin/Root/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+text = "꽃게 AI 모드"
+
 [node name="Sound" type="Button" parent="Margin/Root/Header"]
 unique_name_in_owner = true
 layout_mode = 2

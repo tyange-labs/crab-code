@@ -46,6 +46,9 @@ func _ready() -> void:
 	%Solution.pressed.connect(show_solution)
 	%Speed.pressed.connect(func(): %Speed.text = "속도 %dx" % int(world_view.cycle_speed()))
 	%Sound.pressed.connect(_toggle_sound)
+	%Mode.pressed.connect(func():
+		_save_code()
+		get_tree().change_scene_to_file("res://pool.tscn"))
 	%Next.pressed.connect(func(): set_level(level + 1))
 	code.idle_edited.connect(func():
 		_save_code()
@@ -90,6 +93,7 @@ func _style_static_nodes() -> void:
 	%Progress.add_theme_color_override("font_color", Palette.GREEN)
 	%Progress.add_theme_font_size_override("font_size", 13)
 	%BannerText.callouts = false
+	%Mode.add_theme_font_size_override("font_size", 13)
 	%TabName.add_theme_font_override("font", Palette.code_font())
 	%TabName.add_theme_font_size_override("font_size", 13)
 	%TabHint.add_theme_color_override("font_color", Palette.FAINT)

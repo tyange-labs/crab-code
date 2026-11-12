@@ -91,6 +91,48 @@ impl CrabCore {
         GString::from(&self.check_slot.take())
     }
 
+    // ── 꽃게 AI 모드 (조수 웅덩이) ──
+
+    /// 꽃게 AI 레슨 목록 (JSON).
+    #[func]
+    fn pool_lessons(&self) -> GString {
+        GString::from(&crab_core::pool_game::lessons_json().to_string())
+    }
+
+    /// 읽기 전용 crab.rs 탭에 보여 줄 소스.
+    #[func]
+    fn pool_api(&self) -> GString {
+        GString::from(&crab_core::pool_game::api_source())
+    }
+
+    /// 레벨의 지도와 처음 모습 (JSON).
+    #[func]
+    fn pool_level(&self, level: i64, seed: i64) -> GString {
+        GString::from(&crab_core::pool_game::level_json(level.max(0) as usize, seed as u64).to_string())
+    }
+
+    /// 꽃게 AI 코드를 컴파일하고 실행하기 시작한다. 결과는 poll_run 으로 받는다.
+    #[func]
+    fn start_pool_run(&self, code: GString, level: i64, seed: i64) -> i64 {
+        let code = code.to_string();
+        self.run_slot
+            .start(move || crab_core::pool_game::run_code(&code, level.max(0) as usize, seed as u64)) as i64
+    }
+
+    /// 꽃게 AI 코드의 컴파일 에러만 확인하기 시작한다. 결과는 poll_check 로 받는다.
+    #[func]
+    fn start_pool_check(&self, code: GString) -> i64 {
+        let code = code.to_string();
+        self.check_slot
+            .start(move || json!({ "diagnostics": crab_core::pool_game::check_code(&code) })) as i64
+    }
+
+    /// 코드 줄 수 (빈 줄·주석 제외). 기록에 쓴다.
+    #[func]
+    fn code_lines(&self, code: GString) -> i64 {
+        crab_core::pool_game::code_lines(&code.to_string()) as i64
+    }
+
     /// rustfmt 로 코드를 정리한다 (JSON: ok, code 또는 error). 금방 끝나므로 바로 돌려준다.
     #[func]
     fn format(&self, code: GString) -> GString {

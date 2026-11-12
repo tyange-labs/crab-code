@@ -7,7 +7,7 @@ const DARK := Color("#b93a12")
 
 ## 꽃게. 오른쪽(+x)을 보는 모양을 angle 만큼 돌려 그린다. s 는 한 칸 크기.
 ## walk 는 0~1 걷는 동작, squash 는 착지할 때 납작해지는 정도.
-static func draw_crab(ci: CanvasItem, center: Vector2, s: float, angle: float, walk := 0.0, squash := 0.0) -> void:
+static func draw_crab(ci: CanvasItem, center: Vector2, s: float, angle: float, walk := 0.0, squash := 0.0, shell := SHELL, dark := DARK) -> void:
 	var sc := Vector2(s * (1.0 + squash * 0.12), s * (1.0 - squash * 0.08))
 	# 꽃게 기준 좌표(한 칸 = 1)를 화면 좌표로 바꾼다.
 	var at := func(v: Vector2) -> Vector2: return center + (v * sc).rotated(angle)
@@ -19,14 +19,14 @@ static func draw_crab(ci: CanvasItem, center: Vector2, s: float, angle: float, w
 		for i in 3:
 			var fx := -0.17 + i * 0.12
 			var wiggle := sin(walk * PI * 4.0 + i * 2.0) * 0.035
-			line.call(Vector2(fx, side * 0.18), Vector2(fx - 0.03 + wiggle, side * 0.41), DARK, 0.05)
-		line.call(Vector2(0.1, side * 0.18), Vector2(0.3, side * 0.3), DARK, 0.06)
+			line.call(Vector2(fx, side * 0.18), Vector2(fx - 0.03 + wiggle, side * 0.41), dark, 0.05)
+		line.call(Vector2(0.1, side * 0.18), Vector2(0.3, side * 0.3), dark, 0.06)
 		var pinch := sin(walk * PI * 2.0) * 0.02
-		circle.call(Vector2(0.3 + pinch, side * 0.3), 0.105, SHELL)
-		circle.call(Vector2(0.385 + pinch, side * 0.27), 0.04, DARK)
-	circle.call(Vector2.ZERO, 0.275, DARK)
-	circle.call(Vector2.ZERO, 0.245, SHELL)
-	circle.call(Vector2(-0.06, -0.08), 0.09, SHELL.lightened(0.18))
+		circle.call(Vector2(0.3 + pinch, side * 0.3), 0.105, shell)
+		circle.call(Vector2(0.385 + pinch, side * 0.27), 0.04, dark)
+	circle.call(Vector2.ZERO, 0.275, dark)
+	circle.call(Vector2.ZERO, 0.245, shell)
+	circle.call(Vector2(-0.06, -0.08), 0.09, shell.lightened(0.18))
 	for side in [-1.0, 1.0]:
 		circle.call(Vector2(0.16, side * 0.105), 0.078, Color.WHITE)
 		circle.call(Vector2(0.19, side * 0.105), 0.04, Color("#1a1a22"))

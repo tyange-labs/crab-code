@@ -62,7 +62,7 @@ fn action_name(action: Action) -> &'static str {
     }
 }
 
-fn diagnostics_json(compiled: &Compiled) -> Value {
+pub(crate) fn diagnostics_json(compiled: &Compiled) -> Value {
     compiled
         .diagnostics
         .iter()

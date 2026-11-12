@@ -3,6 +3,10 @@
 
 pub mod game;
 pub mod lessons;
+#[allow(dead_code)] // 일부는 플레이어 프로그램 쪽에서만 쓴다.
+pub mod pool;
+pub mod pool_game;
+pub mod pool_lessons;
 pub mod runner;
 #[allow(dead_code)] // 일부 함수는 플레이어 프로그램 쪽에서만 쓴다.
 pub mod sim;

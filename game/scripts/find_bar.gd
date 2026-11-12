@@ -112,6 +112,8 @@ func open(new_mode: String) -> void:
 	mode = new_mode
 	visible = true
 	var goto := mode == "goto"
+	if mode == "replace" and not editor.editable:
+		mode = "find"
 	_replace_row.visible = mode == "replace"
 	for c in _find_row.get_children():
 		c.visible = not goto or c == find_edit
@@ -286,7 +288,7 @@ func _selection_is_match() -> bool:
 
 
 func replace_one() -> void:
-	if find_edit.text == "":
+	if find_edit.text == "" or not editor.editable:
 		return
 	if not _selection_is_match():
 		find_next(false)
@@ -300,6 +302,8 @@ func replace_one() -> void:
 
 
 func replace_all() -> void:
+	if not editor.editable:
+		return
 	var all := matches()
 	if all.is_empty():
 		return

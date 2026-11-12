@@ -32,6 +32,12 @@ var font_size := 15
 var callouts := true
 ## 줄을 바꾸지 않고 내용 너비만큼만 차지할지 (가방 옆 정보 칩 같은 곳).
 var fit_width := false
+## 인라인 코드가 정의로 갈 수 있는 이름인지 알려 주는 함수 (text -> bool).
+## 그런 코드는 누르면 복사 대신 code_link_clicked 를 보낸다.
+var code_link := Callable()
+
+## 정의로 갈 수 있는 인라인 코드를 눌렀을 때.
+signal code_link_clicked(text: String)
 
 const LINE_GAP := 5.0
 const BLOCK_GAP := 12.0
@@ -515,6 +521,13 @@ func _draw_para(item: Dictionary) -> void:
 			var cf := Palette.code_font()
 			var base: float = b.rect.position.y + CODE_PAD.y + cf.get_ascent(obj.size)
 			draw_string(cf, Vector2(b.rect.position.x + CODE_PAD.x, base), obj.text, HORIZONTAL_ALIGNMENT_LEFT, -1, obj.size, Palette.CODE)
+			if _is_code_link(obj.text):
+				# 정의로 갈 수 있는 코드는 점선 밑줄
+				var uy := base + 3.0
+				var ux: float = b.rect.position.x + CODE_PAD.x
+				while ux < b.rect.end.x - CODE_PAD.x:
+					draw_line(Vector2(ux, uy), Vector2(minf(ux + 3.0, b.rect.end.x - CODE_PAD.x), uy), Color(Palette.SKY, 0.8 if hovered else 0.45), 1.0)
+					ux += 5.0
 		# 글자
 		var x: float = line.pos.x
 		var baseline: float = line.pos.y + line.asc
@@ -538,6 +551,10 @@ func _draw_para(item: Dictionary) -> void:
 				continue
 			for span in ts.shaped_text_get_selection(line.rid, r[0], r[1]):
 				draw_line(Vector2(line.pos.x + span.x, baseline + 3), Vector2(line.pos.x + span.y, baseline + 3), Color(Palette.SKY, 0.6), 1.0)
+
+
+func _is_code_link(text: String) -> bool:
+	return code_link.is_valid() and code_link.call(text)
 
 
 func _range_at(para: Dictionary, index: int):
@@ -570,6 +587,8 @@ func _gui_input(event: InputEvent) -> void:
 		var hit: Dictionary = _hits[h]
 		if hit.kind == "link":
 			OS.shell_open(hit.value)
+		elif hit.kind == "code" and _is_code_link(hit.value):
+			code_link_clicked.emit(hit.value)
 		else:
 			DisplayServer.clipboard_set(hit.value)
 			_toast = {"pos": hit.rect.get_center() if hit.kind == "code" else hit.rect.position + Vector2(hit.rect.size.x / 2.0, 0), "time": Time.get_ticks_msec()}
@@ -591,7 +610,7 @@ func _get_tooltip(at: Vector2) -> String:
 	if h < 0:
 		return ""
 	match _hits[h].kind:
-		"code": return "눌러서 복사"
+		"code": return "눌러서 정의 보기 (crab.rs)" if _is_code_link(_hits[h].value) else "눌러서 복사"
 		"link": return _hits[h].value
 		"copy": return "코드 블록 복사"
 	return ""

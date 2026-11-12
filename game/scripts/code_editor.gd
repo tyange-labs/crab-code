@@ -7,6 +7,13 @@ extends CodeEdit
 signal idle_edited
 ## Shift+Alt+F: rustfmt 로 문서를 정리해 달라는 요청.
 signal format_requested
+## F12 또는 Cmd+클릭: 이름의 정의로 가자는 요청. after_dot 은 `view.here` 처럼 점 뒤의 이름인지.
+signal definition_requested(word: String, after_dot: bool)
+## Ctrl+- (Windows·Linux: Alt+←): 정의로 가기 전 자리로 돌아가자는 요청.
+signal go_back_requested
+
+## 이름에 정의가 있는지 알려 주는 함수 (word -> bool). 있으면 Cmd 를 누르고 올렸을 때 밑줄이 생긴다.
+var definition_check := Callable()
 
 # [이름, 넣을 글, 시그니처, 설명]
 const API := [
@@ -60,6 +67,11 @@ const COL_NUMBER := Color("#d9a8ff")
 const COL_FUNC := Color("#8ec5ff")
 const COL_SYMBOL := Color("#b4b9d0")
 
+## 자동 완성·설명·색칠에 쓰는 단어들. 모드마다 set_vocabulary 로 바꾼다.
+var api: Array = API
+var types: Array = TYPES
+var variants: Array = VARIANTS
+
 var _diagnostics: Array = []
 var _idle_timer := Timer.new()
 var _complete_timer := Timer.new()
@@ -82,6 +94,11 @@ func _ready() -> void:
 	add_child(_complete_timer)
 	text_changed.connect(_on_text_changed)
 	_setup_overlays()
+	symbol_lookup_on_click = true
+	symbol_validate.connect(func(word: String):
+		set_symbol_lookup_word_as_valid(has_definition(word)))
+	symbol_lookup.connect(func(word: String, line: int, column: int):
+		definition_requested.emit(word, _after_dot(line, column)))
 
 
 func _setup_look() -> void:
@@ -125,6 +142,14 @@ func _setup_look() -> void:
 	add_string_delimiter("\"", "\"", false)
 
 
+## 자동 완성·설명·색칠에 쓸 단어들을 바꾼다. (api: [이름, 넣을 글, 시그니처, 설명], types: [이름, 시그니처, 설명])
+func set_vocabulary(new_api: Array, new_types: Array, new_variants: Array) -> void:
+	api = new_api
+	types = new_types
+	variants = new_variants
+	_setup_highlighter()
+
+
 func _setup_highlighter() -> void:
 	var h := CodeHighlighter.new()
 	h.number_color = COL_NUMBER
@@ -135,7 +160,7 @@ func _setup_highlighter() -> void:
 		h.add_keyword_color(k, COL_KEYWORD)
 	for t in PRIMITIVES:
 		h.add_keyword_color(t, COL_TYPE)
-	for t in TYPES:
+	for t in types:
 		h.add_keyword_color(t[0], COL_TYPE)
 	h.add_color_region("//", "", COL_COMMENT, true)
 	h.add_color_region("/*", "*/", COL_COMMENT, false)
@@ -266,6 +291,18 @@ func handle_key(e: InputEventKey) -> bool:
 		return true
 
 	# 줄 옮기기 / 복사 / 지우기 / 새 줄
+	# 정의로 가기 / 돌아가기
+	if k == KEY_F12 and not cmd and not alt and not shift:
+		request_definition()
+		return true
+	if (mac_ctrl and k == KEY_MINUS and not shift) or (not mac and alt and not cmd and not shift and k == KEY_LEFT):
+		go_back_requested.emit()
+		return true
+
+	# 읽기 전용이면 내용을 바꾸는 단축키는 삼킨다.
+	if not editable and _is_editing_key(e):
+		return true
+
 	if alt and not cmd and not mac_ctrl and (k == KEY_UP or k == KEY_DOWN):
 		if shift:
 			copy_lines(k == KEY_UP)
@@ -391,6 +428,57 @@ func handle_key(e: InputEventKey) -> bool:
 	return false
 
 
+# ── 정의로 가기 ─────────────────────────────────────────────────────
+
+func has_definition(word: String) -> bool:
+	return definition_check.is_valid() and definition_check.call(word)
+
+
+## line 의 column 근처 단어 바로 앞이 '.' 인가.
+func _after_dot(line: int, column: int) -> bool:
+	var s := get_line(line)
+	var i := mini(column, s.length())
+	while i > 0 and is_word_char(s[i - 1]):
+		i -= 1
+	return i > 0 and s[i - 1] == "."
+
+
+## 캐럿 밑 단어의 정의로 간다 (F12).
+func request_definition() -> void:
+	var word := get_word_under_caret()
+	if word == "":
+		word = get_word_at_pos(get_caret_draw_pos())
+	if word != "":
+		definition_requested.emit(word, _after_dot(get_caret_line(), get_caret_column()))
+
+
+## 단어를 찾아 그 줄로 가서 선택한다.
+func reveal_word(line: int, word: String) -> void:
+	remove_secondary_carets()
+	var col := maxi(get_line(line).find(word), 0)
+	select(line, col, line, col + word.length())
+	set_caret_line(line)
+	set_caret_column(col + word.length())
+	# 정의가 화면 위쪽에 오도록 둔다.
+	set_line_as_first_visible(maxi(line - 4, 0))
+
+
+func _is_editing_key(e: InputEventKey) -> bool:
+	var cmd := e.is_command_or_control_pressed()
+	var k := e.keycode
+	if e.alt_pressed and not cmd and (k == KEY_UP or k == KEY_DOWN):
+		return true # 줄 옮기기·복사
+	if cmd and e.shift_pressed and k == KEY_K:
+		return true
+	if cmd and not e.alt_pressed and (k == KEY_ENTER or k == KEY_KP_ENTER or k == KEY_BRACKETLEFT or k == KEY_BRACKETRIGHT or k == KEY_SLASH or k == KEY_Y):
+		return true
+	if e.shift_pressed and e.alt_pressed and not cmd and (k == KEY_A or k == KEY_F):
+		return true
+	if cmd and e.shift_pressed and k == KEY_Z:
+		return true
+	return _chord == "k"
+
+
 # ── 주석 ─────────────────────────────────────────────────────────
 
 func _selected_line_range(caret := 0) -> Vector2i:
@@ -417,6 +505,8 @@ func _all_selected_lines() -> Array:
 
 ## 선택한 줄(또는 지금 줄)을 // 주석으로 묶거나 푼다.
 func toggle_comment() -> void:
+	if not editable:
+		return
 	var all_commented := true
 	for i in _all_selected_lines():
 		var t := get_line(i).strip_edges()
@@ -426,6 +516,8 @@ func toggle_comment() -> void:
 
 
 func _set_line_comments(add: bool) -> void:
+	if not editable:
+		return
 	var lines := _all_selected_lines()
 	# 주석 표시는 고른 줄들 중 가장 얕은 들여쓰기에 맞춘다.
 	var indent := 1 << 20
@@ -453,6 +545,8 @@ func _set_line_comments(add: bool) -> void:
 
 ## Shift+Alt+A: 선택을 /* */ 로 감싸거나 푼다. 선택이 없으면 빈 블록 주석을 넣는다.
 func toggle_block_comment() -> void:
+	if not editable:
+		return
 	begin_complex_operation()
 	if has_selection():
 		var sel := get_selected_text()
@@ -476,6 +570,8 @@ func toggle_block_comment() -> void:
 
 ## Shift+Alt+↑/↓: 고른 줄들을 위/아래로 복사한다. 캐럿은 위로 복사하면 위 사본에 남는다.
 func copy_lines(up: bool) -> void:
+	if not editable:
+		return
 	var r := _selected_line_range()
 	var block: Array = []
 	for i in range(r.x, r.y + 1):
@@ -499,6 +595,8 @@ func copy_lines(up: bool) -> void:
 
 ## Cmd+Enter / Cmd+Shift+Enter: 줄 중간에서도 지금 줄은 그대로 두고 아래/위에 새 줄을 연다.
 func insert_line(above: bool) -> void:
+	if not editable:
+		return
 	remove_secondary_carets()
 	deselect()
 	var line := get_caret_line()
@@ -827,9 +925,9 @@ func show_parameter_hint() -> void:
 				while s > 0 and is_word_char(line[s - 1]):
 					s -= 1
 				var fn_name := line.substr(s, name_end - s)
-				for api in API:
-					if api[0] == fn_name:
-						_show_peek("[color=#8ec5ff]%s[/color]\n[color=#8a8fa8]%s[/color]" % [api[2], api[3]], get_caret_line())
+				for a in api:
+					if a[0] == fn_name:
+						_show_peek("[color=#8ec5ff]%s[/color]\n[color=#8a8fa8]%s[/color]" % [a[2], a[3]], get_caret_line())
 						return
 				return
 			depth -= 1
@@ -876,11 +974,11 @@ func _maybe_complete() -> void:
 
 
 func _on_completion_requested() -> void:
-	for a in API:
+	for a in api:
 		add_code_completion_option(CodeEdit.KIND_FUNCTION, a[0], a[1], COL_FUNC, null, a[2])
-	for t in TYPES:
+	for t in types:
 		add_code_completion_option(CodeEdit.KIND_CLASS, t[0], t[0], COL_TYPE, null, t[1])
-	for v in VARIANTS:
+	for v in variants:
 		add_code_completion_option(CodeEdit.KIND_ENUM, v, v, COL_TYPE)
 	for k in KEYWORDS:
 		add_code_completion_option(CodeEdit.KIND_PLAIN_TEXT, k, k, COL_KEYWORD)
@@ -957,12 +1055,13 @@ func _get_tooltip(at: Vector2) -> String:
 			if after_start and before_end:
 				return "rustc: " + d.message
 	var word := get_word_at_pos(at)
-	for a in API:
+	var more := "\n\nF12 · Cmd+클릭: 정의 보기" if has_definition(word) else ""
+	for a in api:
 		if a[0] == word:
-			return a[2] + "\n\n" + a[3]
-	for t in TYPES:
+			return a[2] + "\n\n" + a[3] + more
+	for t in types:
 		if t[0] == word:
-			return t[1] + "\n\n" + t[2]
+			return t[1] + "\n\n" + t[2] + more
 	return ""
 
 
