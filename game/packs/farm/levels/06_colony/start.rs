@@ -16,14 +16,14 @@ impl Farmer for Pip {
     fn tick(&mut self, view: &View) -> Action {
         // 고블린을 신경 쓰지 않는 농부들이에요.
         if !view.carrying() && view.here() == Tile::Crop {
-            return Action::Pick;
+            return Action::Harvest;
         }
         let target = if view.carrying() { view.barn_dir() } else { view.crop_dir() };
         match target {
             Some(dir) => Action::Move(dir),
             None if view.carrying() => {
                 println!("{}번 농부 배달!", self.id);
-                Action::Drop
+                Action::Store
             }
             None => Action::Wait,
         }

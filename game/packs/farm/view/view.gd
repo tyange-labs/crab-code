@@ -36,7 +36,7 @@ const FARMER_FILES := ["farmer_0", "farmer_1", "farmer_2", "farmer_3"]
 const ACTOR := 24 # 농부·고블린 그림 한 프레임의 픽셀 수
 const DIR_VEC := {"N": Vector2(0, -1), "E": Vector2(1, 0), "S": Vector2(0, 1), "W": Vector2(-1, 0)}
 # tiles.png 안의 순서
-enum Tile { GRASS0, GRASS1, SOIL0, SOIL1, PADDY0, PADDY1, STONE0, STONE1, WATER0, WATER1, FLOOD0, FLOOD1, BARN }
+enum Tile { GRASS0, GRASS1, SOIL0, SOIL1, PADDY0, PADDY1, STONE0, STONE1, WATER0, WATER1, FLOOD0, FLOOD1, BARN, PLOT }
 # Kenney 1-Bit Pack 안의 아이콘 (열, 줄)
 const ICON_BUBBLES := Vector2i(35, 11)
 const ICON_SPARKLE := Vector2i(36, 11)
@@ -56,9 +56,29 @@ var _origin := Vector2.ZERO # 지도 (0, 0) 칸의 화면 위치
 
 var _tiles: Texture2D = load(ASSETS + "tiles.png")
 var _goblin: Texture2D = load(ASSETS + "goblin.png")
-var _crop: Texture2D = load(ASSETS + "crop.png")
+var _plants: Texture2D = load(ASSETS + "plants.png")
+var _hud_box := _make_hud_box()
+var _deco := {}
 var _icons: Texture2D = load(ASSETS + "kenney/1bit.png")
 var _farmers: Array = FARMER_FILES.map(func(f): return load(ASSETS + f + ".png"))
+
+
+const PLANT_KINDS := 6
+const ANIMALS := [["deco_cow", 32, 0.9], ["deco_sheep", 32, 0.7], ["deco_pig", 32, 0.8], ["deco_chicken", 32, 1.0], ["deco_duck", 16, 0.8], ["deco_bird", 16, 0.0]]
+
+
+func _make_hud_box() -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = load(ASSETS + "hud_box.png")
+	sb.set_texture_margin_all(3)
+	sb.draw_center = true
+	return sb
+
+
+func _tex(name: String) -> Texture2D:
+	if not _deco.has(name):
+		_deco[name] = load(ASSETS + name + ".png")
+	return _deco[name]
 
 
 func _init() -> void:
@@ -112,23 +132,47 @@ func play_effects(tick: int) -> void:
 		var at := Vector2(c.x, c.y)
 		match c.mishap:
 			"swept":
-				_icon_float(Vector2(was.x, was.y), ICON_BUBBLES, Color("#8fd0ff"))
+				_exp_float(Vector2(was.x, was.y), "exp_stress")
 				_burst(Vector2(was.x, was.y), Color("#6ca8d8"), 14)
 				Sfx.play("bump", 0.7)
 			"caught":
-				_icon_float(Vector2(was.x, was.y), ICON_ALERT, Color("#ffffff"))
-				_icon_float(at, ICON_HOURGLASS, Color("#f2c94c"))
+				_exp_float(Vector2(was.x, was.y), "exp_alert")
 				Sfx.play("fail", 1.4)
 			"bump":
+				_exp_float(at, "exp_confused")
 				Sfx.play("bump", 1.3)
 		if not prev.is_empty() and c.carrying and not was.carrying:
-			_icon_float(at, ICON_SPARKLE, Color("#b6ffe9"))
+			_exp_float(at, "exp_love")
+			_burst(at, Color("#ffd96b"), 8)
 			Sfx.play("collect", 1.0 + i * 0.08)
 	if not prev.is_empty() and f.delivered > prev.delivered:
 		var barn := Vector2(map.barn[0], map.barn[1])
-		_icon_float(barn, ICON_SPARKLE, Palette.ACCENT)
+		_exp_float(barn, "exp_love")
 		_burst(barn, Palette.ACCENT, 18)
 		Sfx.play("deposit")
+	# 이랑: 심기·물 주기·열매가 열리는 순간
+	if not prev.is_empty() and f.has("plots") and prev.has("plots"):
+		for k in f.plots.size():
+			var now: Dictionary = f.plots[k]
+			var was_p: Dictionary = prev.plots[k]
+			var cell := Vector2(now.x, now.y)
+			if now.stage != was_p.stage:
+				if now.stage == "seed":
+					_exp_float(cell, "exp_working")
+					_burst(cell, Color("#8a5a35"), 8)
+					Sfx.play("collect", 0.7)
+				elif now.stage == "sprout" and was_p.stage == "seed":
+					_exp_float(cell, "exp_working")
+					_burst(cell, Color("#6cc4ff"), 14)
+					Sfx.play("bump", 1.8)
+				elif now.stage == "empty" and was_p.stage == "sprout":
+					_burst(cell, Color("#ffe27a"), 16)
+					Sfx.play("deposit", 1.4)
+
+
+## 칸 위로 떠오르며 사라지는 말풍선 (Sunnyside 의 expression 아이콘).
+func _exp_float(cell: Vector2, name: String) -> void:
+	_particles.append({"kind": "exp", "cell": cell, "tex": name, "life": 1.1, "age": 0.0})
 
 
 ## 칸 위로 떠오르며 사라지는 아이콘.
@@ -250,6 +294,8 @@ func _draw() -> void:
 			# posmod: 음수 칸에서도 0 또는 1 (그냥 % 는 -1 이 나와 다른 타일을 가리킨다)
 			_draw_tile(cell, Tile.GRASS0 + posmod(int(cell.x * 3 + cell.y * 7) / 2, 2))
 
+	_draw_decor(first, count)
+
 	# 홍수 정도 (0 = 다 빠짐, 1 = 다 참)
 	var flood: float = lerp(1.0 if a.flood.kind == "high" else 0.0, 1.0 if b.flood.kind == "high" else 0.0, e)
 
@@ -270,12 +316,31 @@ func _draw() -> void:
 						_draw_tile(cell, Tile.FLOOD0 + water_frame, Color(1, 1, 1, flood))
 				"N":
 					_draw_tile(cell, Tile.BARN)
+				"p":
+					_draw_tile(cell, Tile.PLOT)
 				_:
 					_draw_tile(cell, Tile.SOIL0 + h % 2)
 
-	var crop_frame := int(_clock * 3.0) % 2
+	# 이랑에서 자라는 작물 (씨앗 → 싹 → 다 자람)
+	if a.has("plots"):
+		for plot in (a.plots if f < 0.5 else b.plots):
+			var stage := -1
+			match plot.stage:
+				"seed":
+					stage = 0
+				"sprout":
+					stage = clampi(1 + (4 - int(plot.left)), 1, 4)
+			if stage >= 0:
+				_draw_plant(_plant_kind(plot.x, plot.y), stage, Vector2(plot.x, plot.y) * T)
+	# 다 자란 열매: 위아래로 살짝 들썩이고 가끔 반짝인다.
+	var bob := -1.0 if int(_clock * 3.0) % 2 == 1 else 0.0
 	for crop in (a.crops if f < 0.5 else b.crops):
-		_draw_sprite(_crop, crop_frame, Vector2(crop.x, crop.y) * T)
+		var at := Vector2(crop.x, crop.y) * T
+		_draw_plant(_plant_kind(crop.x, crop.y), 5, at + Vector2(0, bob))
+		var gl := int(_clock * 5.0 + crop.x * 3 + crop.y * 5) % 24
+		if gl < 6:
+			var glint := _tex("deco_glint")
+			draw_texture_rect_region(glint, Rect2(_screen(at + Vector2(9, 1)), Vector2(7, 7) * _scale), Rect2(gl * 7, 0, 7, 7))
 
 	for i in a.goblins.size():
 		var ga: Dictionary = a.goblins[i]
@@ -294,12 +359,69 @@ func _draw() -> void:
 
 	for p in _particles:
 		var lk := clampf(p.life, 0.0, 1.0)
-		if p.kind == "icon":
+		if p.kind == "exp":
+			var t: Texture2D = _tex(p.tex)
+			var pos := _screen(p.cell * T + Vector2((T - t.get_width()) / 2.0, -9 - p.age * 8.0))
+			draw_texture_rect(t, Rect2(pos, t.get_size() * _scale), false, Color(1, 1, 1, lk))
+		elif p.kind == "icon":
 			_draw_icon(p.icon, p.cell * T + Vector2(0, -6 - p.age * 10.0), Color(p.color, lk))
 		else:
 			draw_rect(Rect2(_screen(p.pos), Vector2(_scale, _scale)), Color(p.color, lk))
 
 	_draw_hud(a if f < 0.5 else b)
+
+
+## 작물 종류는 칸마다 정해서, 밭이 단조롭지 않게 한다. (호박이 가장 많다.)
+func _plant_kind(x: int, y: int) -> int:
+	var h := absi(hash(Vector2i(x, y)))
+	return 0 if h % 3 != 0 else 1 + (h / 3) % (PLANT_KINDS - 1)
+
+
+func _draw_plant(kind: int, stage: int, art_px: Vector2, color := Color.WHITE) -> void:
+	var dst := Rect2(_screen(art_px), Vector2(T, T) * _scale)
+	draw_texture_rect_region(_plants, dst, Rect2(stage * T, kind * T, T, T), color)
+
+
+## 지도 밖 풀밭에 나무·버섯·동물을 흩뿌린다 (칸 번호로 정해서 늘 같은 자리).
+func _draw_decor(first: Vector2, count: Vector2) -> void:
+	for gy in int(count.y):
+		for gx in int(count.x):
+			var cell := first + Vector2(gx, gy)
+			if cell.x >= -1 and cell.y >= -1 and cell.x <= map.w and cell.y <= map.h:
+				continue
+			var h := absi(hash(Vector2i(int(cell.x), int(cell.y))))
+			var base := cell * T
+			var r := h % 53
+			if r == 0 or r == 1:
+				var tree := _tex("deco_tree1")
+				var frame := int(_clock * 2.0 + cell.x) % 4
+				draw_texture_rect_region(tree, Rect2(_screen(base + Vector2(-8, -18)), Vector2(32, 34) * _scale), Rect2(frame * 32, 0, 32, 34))
+			elif r == 2:
+				var tree2 := _tex("deco_tree2")
+				var frame2 := int(_clock * 2.0 + cell.y) % 4
+				draw_texture_rect_region(tree2, Rect2(_screen(base + Vector2(-6, -27)), Vector2(28, 43) * _scale), Rect2(frame2 * 28, 0, 28, 43))
+			elif r == 3:
+				var mush := _tex("deco_mushroom")
+				draw_texture_rect_region(mush, Rect2(_screen(base), Vector2(T, T) * _scale), Rect2((int(_clock * 2.0) % 4) * 16, 0, 16, 16))
+			elif r >= 4 and r <= 8:
+				# 동물은 칸 안에서 천천히 오간다
+				var kind: Array = ANIMALS[(r - 4) % ANIMALS.size()]
+				var cell_px: int = kind[1]
+				var phase := float(h % 100)
+				var walk := sin(_clock * float(kind[2]) * 0.6 + phase)
+				var frame3 := int(_clock * 4.0 + phase) % 4
+				var tex := _tex(kind[0])
+				var off := Vector2(walk * 10.0, 0.0)
+				var origin := base + off - Vector2((cell_px - T) / 2.0, cell_px - T)
+				var flip := cos(_clock * float(kind[2]) * 0.6 + phase) < 0.0
+				var dst := Rect2(_screen(origin), Vector2(cell_px, cell_px) * _scale)
+				var src := Rect2(frame3 * cell_px, 0, cell_px, cell_px)
+				if flip:
+					draw_set_transform(dst.position + Vector2(dst.size.x, 0), 0.0, Vector2(-1, 1))
+					draw_texture_rect_region(tex, Rect2(Vector2.ZERO, dst.size), src)
+					draw_set_transform(Vector2.ZERO)
+				else:
+					draw_texture_rect_region(tex, dst, src)
 
 
 func _near_open(x: int, y: int) -> bool:
@@ -344,6 +466,8 @@ func _draw_farmer(i: int, ca: Dictionary, cb: Dictionary, f: float, e: float) ->
 		_draw_icon(ICON_CORNERS, art, Color(1, 1, 1, 0.55 + 0.25 * sin(_clock * 5.0)))
 	draw_rect(Rect2(_screen(art + Vector2(3, 13)), Vector2(10, 2) * _scale), Color(0, 0, 0, 0.3 * alpha))
 	_draw_actor(_farmers[i % _farmers.size()], col, anim_row, art, color, cb.facing == "W")
+	if carrying and alpha > 0.3:
+		_draw_plant(0, 5, art + Vector2(0, -12), color)
 
 
 func _draw_hud(fr: Dictionary) -> void:
@@ -361,8 +485,7 @@ func _draw_hud(fr: Dictionary) -> void:
 func _chip(x: float, text: String, color: Color, font: Font) -> float:
 	var fs := Palette.PIXEL_SIZE
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 20.0
-	draw_rect(Rect2(x, 8, w, 24), Color(0.02, 0.05, 0.09, 0.75))
-	draw_rect(Rect2(x, 8, w, 24), Color(1, 1, 1, 0.12), false, 2.0)
+	draw_style_box(_hud_box, Rect2(x, 8, w, 24))
 	var baseline := 8.0 + 12.0 + (font.get_ascent(fs) - font.get_descent(fs)) / 2.0
 	draw_string(font, Vector2(x + 10, round(baseline)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, color)
 	return x + w + 6.0

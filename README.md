@@ -1,13 +1,15 @@
-# Crab Code
+# Sprout Code
 
-Rust 로 게임 속 세계를 움직이며 Rust 를 배우는 게임. 코드는 **내가 쓰는 IDE** 에서 짠다.
+Rust 로 게임 속 세계를 움직이며 Rust 를 배우는 게임. 지금 들어 있는 주 게임팩은 **해바라기 농장**: 코드로 농부를 움직여 씨를 뿌리고 열매를 거둔다. 코드는 **내가 쓰는 IDE** 에서 짠다.
 
 - 게임은 화면만 맡는다. 코드는 작업 폴더(진짜 cargo 워크스페이스)에 있고, VS Code·RustRover·Zed 등
   아무 IDE 로 열면 rust-analyzer 의 자동 완성·정의로 이동·에러 표시가 그대로 된다.
 - IDE 에서 파일을 **저장하면** 게임이 알아채서 `cargo build` 하고 실행해, 그 결과를 재생한다.
   타임라인으로 아무 틱이나 돌려 보고, 행위자를 눌러 그 순간 `tick()` 이 고른 행동과 `{:?}` 상태를 볼 수 있다.
 - 작업 폴더는 git 저장소다. 레벨을 깨면 커밋이 남고, 최고 기록에는 `best/<팩>/<레벨>` 태그가 붙는다.
-- 게임 자체는 **게임팩** 으로 갈아끼운다. 지금 들어 있는 팩:
+- 게임 자체는 **게임팩** 으로 갈아끼운다 (`game/packs/<id>/` 폴더 하나가 팩 하나, 폴더를 넣고 빼면 된다). 지금 들어 있는 팩:
+  - **해바라기 농장** (`farm`) — `Farmer` 트레이트를 구현해 농부의 두뇌를 만든다. 걷기 → 거두기·넣기 → Option → 필드와 &mut self →
+    홍수 enum → 고블린과 여러 명 → 씨 뿌리고 물 주기(튜플 match). 7개 레벨. 그림은 Sunnyside World (아래 출처).
   - **조수 웅덩이** (`tidepool`) — `Crab` 트레이트를 구현해 꽃게의 두뇌를 만든다. 처음엔 걷기만, 레벨마다 쓸 수 있는 것이
     하나씩 늘어난다 (집기·내려놓기 → Option → 필드와 &mut self → 물때 enum → 갈매기와 여러 마리). 6개 레벨.
   - **퍼즐** (`puzzle`) — 꽃게 한 마리를 `move_forward()` 같은 함수로 움직인다. 『프로그래밍 러스트』 2~17장 순서, 51개 레벨.
@@ -23,20 +25,20 @@ godot --headless --path game --import    # 처음 한 번 (스크립트 클래�
 godot --path game                        # 게임 실행
 ```
 
-처음 실행하면 작업 폴더를 만드는 창이 뜬다: 위치(기본 `~/CrabCode`)와 **커밋에 쓸 이름·이메일** 을 정한다.
+처음 실행하면 작업 폴더를 만드는 창이 뜬다: 위치(기본 `~/SproutCode`)와 **커밋에 쓸 이름·이메일** 을 정한다.
 이름·이메일은 그 작업 폴더 저장소에만 설정되고(전역 git 설정은 그대로), 작업 폴더에서는 커밋 서명을 끈다
 (혼자 보는 학습 기록이라 필요 없고, 서명 키 암호를 묻느라 게임이 멈추면 안 되므로).
 그다음 게임의 **IDE 로 열기** 를 누르거나 직접 그 폴더를 IDE 로 연다.
 
 ```
-~/CrabCode/
+~/SproutCode/
   tidepool/levels/04_tide.rs   ← 이런 파일을 고치고 저장한다
   puzzle/levels/03_for.rs
   .crab/packs/                 게임팩 소스 (IDE 에서 F12 로 정의를 보면 여기로 온다. 게임이 관리한다)
   .crab/progress.json          클리어 기록
 ```
 
-터미널에서 직접 돌려 볼 수도 있다: `cd ~/CrabCode && cargo run --bin tide` (결과가 글로 나온다).
+터미널에서 직접 돌려 볼 수도 있다: `cd ~/SproutCode && cargo run --bin tide` (결과가 글로 나온다).
 
 환경 변수:
 
@@ -124,3 +126,9 @@ rustc 가 "그런 변형/메서드는 없다" 고 알려 준다. 세계 시뮬�
 - [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), [Pretendard](https://github.com/orioncactus/pretendard) — SIL Open Font License 1.1 (`game/fonts/`)
 - [갈무리 Galmuri](https://github.com/quiple/galmuri) — SIL Open Font License 1.1 (`game/fonts/Galmuri-LICENSE.txt`)
 - [Kenney 1-Bit Pack](https://kenney.nl/assets/1-bit-pack) — CC0 (`game/packs/tidepool/view/assets/kenney/`)
+
+## 그림 출처
+
+- **Sunnyside World** by danieldiggle — https://danieldiggle.itch.io/sunnyside (해바라기 농장 팩의 타일·캐릭터·작물·동물·UI).
+  원본은 `game/packs/farm/art/sunnyside/` 에 있고, `python3 game/packs/farm/art/sunnyside.py` 가 게임용 그림을 만든다. 조건은 그 폴더의 README 참고.
+- Kenney 1-Bit Pack (CC0), Galmuri (OFL).

@@ -88,12 +88,18 @@ pub enum Tile {
     Barn,
     /// 고블린이 있는 칸.
     Goblin,
+    /// 빈 이랑. 씨앗을 심을 수 있다.
+    Plot,
+    /// 씨앗을 심은 이랑. 물을 줘야 자란다.
+    Seed,
+    /// 물을 줘서 자라는 중인 싹.
+    Sprout,
 }
 
 impl Tile {
     /// 지금 걸어 들어갈 수 있는 칸인가.
     pub fn is_open(self) -> bool {
-        matches!(self, Tile::Soil | Tile::Paddy | Tile::Crop | Tile::Barn)
+        matches!(self, Tile::Soil | Tile::Paddy | Tile::Crop | Tile::Barn | Tile::Plot | Tile::Seed | Tile::Sprout)
     }
 }
 
@@ -105,9 +111,13 @@ pub enum Action {
     /// 그쪽으로 한 칸 걸어요한다.
     Move(Dir),
     /// 발밑의 열매를 집는다.
-    Pick,
+    Harvest,
     /// 들고 있는 열매를 내려놓는다. 창고 위라면 배달 완료.
-    Drop,
+    Store,
+    /// 발밑 이랑에 씨앗을 심는다.
+    Plant,
+    /// 발밑 이랑의 씨앗에 물을 준다.
+    Water,
 }
 
 impl Action {
@@ -115,8 +125,10 @@ impl Action {
         match self {
             Action::Wait => "W".into(),
             Action::Move(d) => format!("M{}", d.code()),
-            Action::Pick => "P".into(),
-            Action::Drop => "D".into(),
+            Action::Harvest => "P".into(),
+            Action::Store => "D".into(),
+            Action::Plant => "S".into(),
+            Action::Water => "A".into(),
         }
     }
 
@@ -125,8 +137,10 @@ impl Action {
         Some(match chars.next()? {
             'W' => Action::Wait,
             'M' => Action::Move(Dir::from_code(chars.next()?)?),
-            'P' => Action::Pick,
-            'D' => Action::Drop,
+            'P' => Action::Harvest,
+            'D' => Action::Store,
+            'S' => Action::Plant,
+            'A' => Action::Water,
             _ => return None,
         })
     }
@@ -150,6 +164,7 @@ pub enum Ground {
     Water,
     Paddy,
     Barn,
+    Plot,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -198,6 +213,27 @@ pub struct Goblin {
     pub dir: Dir,
 }
 
+/// 이랑 한 칸의 상태.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlotStage {
+    /// 비어 있다.
+    Empty,
+    /// 씨앗을 심었다. 물을 줘야 자란다.
+    Seeded,
+    /// 물을 줬다. left 틱 뒤에 다 자란다.
+    Growing { left: u32 },
+}
+
+#[derive(Clone, Debug)]
+pub struct Plot {
+    pub x: i32,
+    pub y: i32,
+    pub stage: PlotStage,
+}
+
+/// 물을 준 뒤 다 자랄 때까지 걸리는 틱.
+pub const GROW_TICKS: u32 = 4;
+
 /// 농부가 한 틱에 보는 것. 플레이어 코드의 tick() 이 &View 로 빌려 받는다.
 #[derive(Clone, Debug)]
 pub struct View {
@@ -210,6 +246,7 @@ pub struct View {
     carrying: bool,
     crop_dir: Option<Dir>,
     barn_dir: Option<Dir>,
+    plot_dir: Option<Dir>,
     flood: Flood,
     delivered: u32,
     goal: u32,
@@ -259,6 +296,11 @@ impl View {
     /// 창고로 가는 첫걸음. 이미 창고 위라면 None.
     pub fn barn_dir(&self) -> Option<Dir> {
         self.barn_dir
+    }
+
+    /// 손이 필요한 이랑(빈 이랑이나 물을 안 준 씨앗)으로 가는 첫걸음. 없으면 None.
+    pub fn plot_dir(&self) -> Option<Dir> {
+        self.plot_dir
     }
 
     /// 지금 수위.
@@ -311,6 +353,7 @@ pub struct Spec {
 //   #  돌       .  흙       N  창고 (농부가 여기서 시작)
 //   f  열매       ?  열매가 놓일 수 있는 자리
 //   ~  논 (홍수가 들어오면 잠긴다)      w  깊은 물
+//   p  이랑 (씨앗을 심고 물을 주면 열매가 자란다)
 //   g  가로로 왕복하는 고블린             G  세로로 왕복하는 고블린
 pub const SPECS: &[Spec] = &[
     Spec {
@@ -417,6 +460,25 @@ pub const SPECS: &[Spec] = &[
         respawn: true,
         reach: false,
     },
+    Spec {
+        id: "sow",
+        map: &[
+            "#############",
+            "#N..........#",
+            "#...........#",
+            "#..p..p..p..#",
+            "#...........#",
+            "#############",
+        ],
+        farmers: 1,
+        goal: 3,
+        max_ticks: 70,
+        smell: u32::MAX,
+        flood: None,
+        random_crop: 0,
+        respawn: false,
+        reach: false,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();
@@ -429,6 +491,7 @@ pub struct Field {
     pub barn: (i32, i32),
     pub farmers: Vec<FarmerState>,
     pub crops: Vec<Crop>,
+    pub plots: Vec<Plot>,
     pub goblins: Vec<Goblin>,
     pub tick: u32,
     pub delivered: u32,
@@ -463,6 +526,7 @@ pub fn build(level: usize, seed: u64) -> Field {
         barn: (0, 0),
         farmers: Vec::new(),
         crops: Vec::new(),
+        plots: Vec::new(),
         goblins: Vec::new(),
         tick: 0,
         delivered: 0,
@@ -484,6 +548,10 @@ pub fn build(level: usize, seed: u64) -> Field {
                 '#' => field.ground[i] = Ground::Stone,
                 'w' => field.ground[i] = Ground::Water,
                 '~' => field.ground[i] = Ground::Paddy,
+                'p' => {
+                    field.ground[i] = Ground::Plot;
+                    field.plots.push(Plot { x, y, stage: PlotStage::Empty });
+                }
                 'N' => {
                     field.ground[i] = Ground::Barn;
                     field.barn = (x, y);
@@ -559,13 +627,23 @@ impl Field {
         self.crops.push(Crop { x, y, home: (x, y), state: CropState::Ground });
     }
 
+    fn plot_at(&self, x: i32, y: i32) -> Option<&Plot> {
+        self.plots.iter().find(|p| p.x == x && p.y == y)
+    }
+
+    /// 손이 필요한 이랑인가: 열매가 안 열렸고, 비었거나 물을 안 준 씨앗.
+    fn plot_needs_work(&self, x: i32, y: i32) -> bool {
+        self.crop_on_ground(x, y).is_none()
+            && matches!(self.plot_at(x, y).map(|p| p.stage), Some(PlotStage::Empty) | Some(PlotStage::Seeded))
+    }
+
     fn crop_on_ground(&self, x: i32, y: i32) -> Option<usize> {
         self.crops.iter().position(|f| f.state == CropState::Ground && f.x == x && f.y == y)
     }
 
     /// 농부가 걸어 다닐 수 있는 땅 (수위는 따지지 않는다).
     fn walkable(&self, x: i32, y: i32) -> bool {
-        matches!(self.ground_at(x, y), Ground::Soil | Ground::Paddy | Ground::Barn)
+        matches!(self.ground_at(x, y), Ground::Soil | Ground::Paddy | Ground::Barn | Ground::Plot)
     }
 
     fn tile_at(&self, x: i32, y: i32) -> Tile {
@@ -584,6 +662,12 @@ impl Field {
             g => {
                 if self.crop_on_ground(x, y).is_some() {
                     Tile::Crop
+                } else if g == Ground::Plot {
+                    match self.plot_at(x, y).map(|p| p.stage) {
+                        Some(PlotStage::Seeded) => Tile::Seed,
+                        Some(PlotStage::Growing { .. }) => Tile::Sprout,
+                        _ => Tile::Plot,
+                    }
                 } else if g == Ground::Paddy {
                     Tile::Paddy
                 } else {
@@ -632,7 +716,7 @@ impl Field {
     fn goblin_next(&self, g: &Goblin) -> (i32, i32, Dir) {
         let ok = |d: Dir| {
             let (dx, dy) = d.delta();
-            matches!(self.ground_at(g.x + dx, g.y + dy), Ground::Soil | Ground::Paddy)
+            matches!(self.ground_at(g.x + dx, g.y + dy), Ground::Soil | Ground::Paddy | Ground::Plot)
         };
         let dir = if ok(g.dir) {
             g.dir
@@ -680,6 +764,7 @@ impl Field {
             carrying: c.carrying.is_some(),
             crop_dir,
             barn_dir: self.first_step((c.x, c.y), |x, y| (x, y) == barn).map(|(d, _)| d),
+            plot_dir: self.first_step((c.x, c.y), |x, y| self.plot_needs_work(x, y)).map(|(d, _)| d),
             flood: self.flood_now(),
             delivered: self.delivered,
             goal: self.goal,
@@ -741,7 +826,7 @@ impl Field {
                         }
                     }
                 }
-                Action::Pick => {
+                Action::Harvest => {
                     if self.farmers[i].carrying.is_some() {
                         self.events.push((i, "이미 열매를 들고 있어요.".into()));
                     } else if let Some(f) = self.crop_on_ground(x, y) {
@@ -751,7 +836,24 @@ impl Field {
                         self.events.push((i, "여기에는 주울 열매가 없어요.".into()));
                     }
                 }
-                Action::Drop => match self.farmers[i].carrying.take() {
+                Action::Plant => match self.plots.iter().position(|p| p.x == x && p.y == y) {
+                    None => self.events.push((i, "여기는 이랑이 아니에요.".into())),
+                    Some(k) if self.crop_on_ground(x, y).is_some() || self.plots[k].stage != PlotStage::Empty => {
+                        self.events.push((i, "이 이랑에는 벌써 씨앗이나 열매가 있어요.".into()))
+                    }
+                    Some(k) => {
+                        self.plots[k].stage = PlotStage::Seeded;
+                        self.events.push((i, "씨앗을 심었어요.".into()));
+                    }
+                },
+                Action::Water => match self.plots.iter().position(|p| p.x == x && p.y == y) {
+                    Some(k) if self.plots[k].stage == PlotStage::Seeded => {
+                        self.plots[k].stage = PlotStage::Growing { left: GROW_TICKS };
+                        self.events.push((i, format!("물을 줬어요. {GROW_TICKS}틱 뒤에 다 자라요.")));
+                    }
+                    _ => self.events.push((i, "물을 줄 씨앗이 없어요.".into())),
+                },
+                Action::Store => match self.farmers[i].carrying.take() {
                     None => self.events.push((i, "내려놓을 열매가 없어요.".into())),
                     Some(f) => {
                         if (x, y) == self.barn {
@@ -778,6 +880,20 @@ impl Field {
         }
 
         self.tick += 1;
+
+        // 물을 준 싹은 자라서, 다 자라면 그 이랑에 열매가 열린다.
+        for k in 0..self.plots.len() {
+            if let PlotStage::Growing { left } = self.plots[k].stage {
+                if left <= 1 {
+                    let (x, y) = (self.plots[k].x, self.plots[k].y);
+                    self.plots[k].stage = PlotStage::Empty;
+                    self.crops.push(Crop { x, y, home: (x, y), state: CropState::Ground });
+                    self.events.push((0, format!("({x}, {y}) 이랑에 열매가 열렸어요!")));
+                } else {
+                    self.plots[k].stage = PlotStage::Growing { left: left - 1 };
+                }
+            }
+        }
 
         for i in 0..self.farmers.len() {
             let (x, y) = (self.farmers[i].x, self.farmers[i].y);

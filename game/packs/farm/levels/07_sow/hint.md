@@ -1,0 +1,1 @@
+먼저 발밑을 보고 할 일을 정해요. `(Tile::Plot, _)` 면 심고, `(Tile::Seed, _)` 면 물을 주고, `(Tile::Crop, false)` 면 거두고, `(Tile::Barn, true)` 면 창고에 넣어요. 어디에도 안 걸리면 걸어갈 곳을 `plot_dir()` 와 `crop_dir()` 로 고르세요. 열매를 들고 있으면 `barn_dir()` 로 가요.

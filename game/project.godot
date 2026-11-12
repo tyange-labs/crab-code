@@ -4,7 +4,7 @@ config_version=5
 
 [application]
 
-config/name="Crab Code"
+config/name="Sprout Code"
 config/description="꽃게 페리스를 Rust 코드로 움직이며 Rust 를 배우는 퍼즐"
 run/main_scene="res://host.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")

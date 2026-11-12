@@ -14,12 +14,12 @@ impl Farmer for Pip {
     fn tick(&mut self, view: &View) -> Action {
         // 수위를 보지 않고 곧장 건너요. 실행해서 무슨 일이 생기는지 보세요!
         if !view.carrying() && view.here() == Tile::Crop {
-            return Action::Pick;
+            return Action::Harvest;
         }
         let target = if view.carrying() { view.barn_dir() } else { view.crop_dir() };
         match target {
             Some(dir) => Action::Move(dir),
-            None if view.carrying() => Action::Drop,
+            None if view.carrying() => Action::Store,
             None => Action::Wait,
         }
     }

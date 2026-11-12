@@ -17,7 +17,7 @@
 ```rust
 match view.barn_dir() {
     Some(dir) => Action::Move(dir),
-    None => Action::Drop, // 창고에 도착!
+    None => Action::Store, // 창고에 도착!
 }
 ```
 

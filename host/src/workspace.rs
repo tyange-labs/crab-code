@@ -1,6 +1,6 @@
 // 작업 폴더: 플레이어가 IDE 로 여는 진짜 cargo 워크스페이스이자 git 저장소.
 //
-//   ~/CrabCode/
+//   ~/SproutCode/
 //     Cargo.toml              [workspace] (게임팩마다 멤버 하나)
 //     .crab/packs/<팩>/       게임팩 크레이트 사본 (게임이 관리한다, git 에서 뺀다)
 //     <팩>/Cargo.toml         레벨마다 [[bin]] 하나
@@ -17,7 +17,7 @@ pub fn default_root() -> PathBuf {
         return PathBuf::from(dir);
     }
     let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_else(|_| ".".into());
-    PathBuf::from(home).join("CrabCode")
+    PathBuf::from(home).join("SproutCode")
 }
 
 fn write_if_changed(path: &Path, content: &str) -> std::io::Result<()> {
@@ -64,9 +64,9 @@ fn copy_dir(from: &Path, to: &Path) -> std::io::Result<()> {
 const GITIGNORE: &str = "/target\n/.crab/packs/\n";
 
 const README: &str = "\
-# Crab Code 작업 폴더
+# Sprout Code 작업 폴더
 
-Crab Code 게임이 만든 cargo 워크스페이스예요. 이 폴더를 좋아하는 IDE(VS Code, RustRover, Zed …)로 여세요.
+Sprout Code 게임이 만든 cargo 워크스페이스예요. 이 폴더를 좋아하는 IDE(VS Code, RustRover, Zed …)로 여세요.
 
 - 게임팩마다 폴더가 하나씩 있고, `levels/` 안의 파일 하나가 레벨 하나예요.
 - 파일을 저장하면 게임 창이 바로 빌드하고 실행해서 보여 줘요.
@@ -111,7 +111,7 @@ pub fn pack_crate_dir(root: &Path, pack: &Pack) -> PathBuf {
 
 fn play_manifest(pack: &Pack) -> String {
     let mut s = format!(
-        "# Crab Code 가 만든 파일이에요. 게임팩: {}\n[package]\nname = \"{}-play\"\nversion = \"0.1.0\"\nedition = \"2021\"\npublish = false\nautobins = false\n\n[dependencies]\n{} = {{ path = \"../.crab/packs/{}\" }}\n",
+        "# Sprout Code 가 만든 파일이에요. 게임팩: {}\n[package]\nname = \"{}-play\"\nversion = \"0.1.0\"\nedition = \"2021\"\npublish = false\nautobins = false\n\n[dependencies]\n{} = {{ path = \"../.crab/packs/{}\" }}\n",
         pack.name(),
         pack.id,
         pack.crate_name,
@@ -134,7 +134,7 @@ fn root_manifest(root: &Path) -> String {
     members.sort();
     let list = members.iter().map(|m| format!("\"{m}\"")).collect::<Vec<_>>().join(", ");
     format!(
-        "# Crab Code 가 만든 파일이에요.\n[workspace]\nresolver = \"2\"\nmembers = [{list}]\n\n# 저장할 때마다 빌드하니 빠르게.\n[profile.dev]\ndebug = 0\n"
+        "# Sprout Code 가 만든 파일이에요.\n[workspace]\nresolver = \"2\"\nmembers = [{list}]\n\n# 저장할 때마다 빌드하니 빠르게.\n[profile.dev]\ndebug = 0\n"
     )
 }
 
@@ -194,7 +194,7 @@ pub fn ensure(root: &Path, pack: &Pack, identity: Option<(&str, &str)>) -> Resul
     let mut note = String::new();
     if use_git {
         if fresh {
-            git::commit_all(root, "Crab Code 작업 폴더를 만들었어요")?;
+            git::commit_all(root, "Sprout Code 작업 폴더를 만들었어요")?;
         } else if let Some(archive) = &migrated {
             git::commit_all(root, &format!("{}: 게임팩 업데이트 — 예전 레벨 파일은 {archive}/ 에 보관", pack.name()))?;
         } else if !created.is_empty() {

@@ -39,8 +39,8 @@ impl From<crate::level2::Action> for w::Action {
         match a {
             crate::level2::Action::Wait => w::Action::Wait,
             crate::level2::Action::Move(d) => w::Action::Move(d.into()),
-            crate::level2::Action::Pick => w::Action::Pick,
-            crate::level2::Action::Drop => w::Action::Drop,
+            crate::level2::Action::Harvest => w::Action::Harvest,
+            crate::level2::Action::Store => w::Action::Store,
         }
     }
 }
@@ -74,6 +74,7 @@ impl From<w::Tile> for crate::level2::Tile {
             w::Tile::Paddy => crate::level2::Tile::Soil,
             w::Tile::Water => crate::level2::Tile::Soil,
             w::Tile::Goblin => crate::level2::Tile::Soil,
+            w::Tile::Plot | w::Tile::Seed | w::Tile::Sprout => crate::level2::Tile::Soil,
         }
     }
 }
@@ -84,8 +85,8 @@ impl From<crate::level3::Action> for w::Action {
         match a {
             crate::level3::Action::Wait => w::Action::Wait,
             crate::level3::Action::Move(d) => w::Action::Move(d.into()),
-            crate::level3::Action::Pick => w::Action::Pick,
-            crate::level3::Action::Drop => w::Action::Drop,
+            crate::level3::Action::Harvest => w::Action::Harvest,
+            crate::level3::Action::Store => w::Action::Store,
         }
     }
 }
@@ -119,6 +120,7 @@ impl From<w::Tile> for crate::level3::Tile {
             w::Tile::Paddy => crate::level3::Tile::Soil,
             w::Tile::Water => crate::level3::Tile::Soil,
             w::Tile::Goblin => crate::level3::Tile::Soil,
+            w::Tile::Plot | w::Tile::Seed | w::Tile::Sprout => crate::level3::Tile::Soil,
         }
     }
 }
@@ -129,8 +131,8 @@ impl From<crate::level4::Action> for w::Action {
         match a {
             crate::level4::Action::Wait => w::Action::Wait,
             crate::level4::Action::Move(d) => w::Action::Move(d.into()),
-            crate::level4::Action::Pick => w::Action::Pick,
-            crate::level4::Action::Drop => w::Action::Drop,
+            crate::level4::Action::Harvest => w::Action::Harvest,
+            crate::level4::Action::Store => w::Action::Store,
         }
     }
 }
@@ -164,6 +166,7 @@ impl From<w::Tile> for crate::level4::Tile {
             w::Tile::Paddy => crate::level4::Tile::Soil,
             w::Tile::Water => crate::level4::Tile::Stone,
             w::Tile::Goblin => crate::level4::Tile::Soil,
+            w::Tile::Plot | w::Tile::Seed | w::Tile::Sprout => crate::level4::Tile::Soil,
         }
     }
 }
@@ -174,8 +177,8 @@ impl From<crate::level5::Action> for w::Action {
         match a {
             crate::level5::Action::Wait => w::Action::Wait,
             crate::level5::Action::Move(d) => w::Action::Move(d.into()),
-            crate::level5::Action::Pick => w::Action::Pick,
-            crate::level5::Action::Drop => w::Action::Drop,
+            crate::level5::Action::Harvest => w::Action::Harvest,
+            crate::level5::Action::Store => w::Action::Store,
         }
     }
 }
@@ -209,6 +212,7 @@ impl From<w::Tile> for crate::level5::Tile {
             w::Tile::Paddy => crate::level5::Tile::Paddy,
             w::Tile::Water => crate::level5::Tile::Water,
             w::Tile::Goblin => crate::level5::Tile::Soil,
+            w::Tile::Plot | w::Tile::Seed | w::Tile::Sprout => crate::level5::Tile::Soil,
         }
     }
 }
@@ -228,8 +232,8 @@ impl From<crate::level6::Action> for w::Action {
         match a {
             crate::level6::Action::Wait => w::Action::Wait,
             crate::level6::Action::Move(d) => w::Action::Move(d.into()),
-            crate::level6::Action::Pick => w::Action::Pick,
-            crate::level6::Action::Drop => w::Action::Drop,
+            crate::level6::Action::Harvest => w::Action::Harvest,
+            crate::level6::Action::Store => w::Action::Store,
         }
     }
 }
@@ -263,6 +267,7 @@ impl From<w::Tile> for crate::level6::Tile {
             w::Tile::Paddy => crate::level6::Tile::Paddy,
             w::Tile::Water => crate::level6::Tile::Water,
             w::Tile::Goblin => crate::level6::Tile::Goblin,
+            w::Tile::Plot | w::Tile::Seed | w::Tile::Sprout => crate::level6::Tile::Soil,
         }
     }
 }
@@ -272,6 +277,65 @@ impl From<w::Flood> for crate::level6::Flood {
             w::Flood::Low { turns_left } => crate::level6::Flood::Low { turns_left },
             w::Flood::High { turns_left } => crate::level6::Flood::High { turns_left },
             w::Flood::Calm => crate::level6::Flood::Calm,
+        }
+    }
+}
+
+// ── level7 ──
+impl From<crate::level7::Action> for w::Action {
+    fn from(a: crate::level7::Action) -> w::Action {
+        match a {
+            crate::level7::Action::Wait => w::Action::Wait,
+            crate::level7::Action::Move(d) => w::Action::Move(d.into()),
+            crate::level7::Action::Harvest => w::Action::Harvest,
+            crate::level7::Action::Store => w::Action::Store,
+            crate::level7::Action::Plant => w::Action::Plant,
+            crate::level7::Action::Water => w::Action::Water,
+        }
+    }
+}
+impl From<crate::level7::Dir> for w::Dir {
+    fn from(d: crate::level7::Dir) -> w::Dir {
+        match d {
+            crate::level7::Dir::North => w::Dir::North,
+            crate::level7::Dir::East => w::Dir::East,
+            crate::level7::Dir::South => w::Dir::South,
+            crate::level7::Dir::West => w::Dir::West,
+        }
+    }
+}
+impl From<w::Dir> for crate::level7::Dir {
+    fn from(d: w::Dir) -> crate::level7::Dir {
+        match d {
+            w::Dir::North => crate::level7::Dir::North,
+            w::Dir::East => crate::level7::Dir::East,
+            w::Dir::South => crate::level7::Dir::South,
+            w::Dir::West => crate::level7::Dir::West,
+        }
+    }
+}
+impl From<w::Tile> for crate::level7::Tile {
+    fn from(t: w::Tile) -> crate::level7::Tile {
+        match t {
+            w::Tile::Soil => crate::level7::Tile::Soil,
+            w::Tile::Crop => crate::level7::Tile::Crop,
+            w::Tile::Barn => crate::level7::Tile::Barn,
+            w::Tile::Stone => crate::level7::Tile::Stone,
+            w::Tile::Paddy => crate::level7::Tile::Paddy,
+            w::Tile::Water => crate::level7::Tile::Water,
+            w::Tile::Goblin => crate::level7::Tile::Goblin,
+            w::Tile::Plot => crate::level7::Tile::Plot,
+            w::Tile::Seed => crate::level7::Tile::Seed,
+            w::Tile::Sprout => crate::level7::Tile::Sprout,
+        }
+    }
+}
+impl From<w::Flood> for crate::level7::Flood {
+    fn from(t: w::Flood) -> crate::level7::Flood {
+        match t {
+            w::Flood::Low { turns_left } => crate::level7::Flood::Low { turns_left },
+            w::Flood::High { turns_left } => crate::level7::Flood::High { turns_left },
+            w::Flood::Calm => crate::level7::Flood::Calm,
         }
     }
 }

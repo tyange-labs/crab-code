@@ -31,15 +31,15 @@ pub fn play<C: Farmer>() {
 pub enum Action {
     /// 가만히 있어요.
     Wait,
-    /// 그쪽으로 한 칸 걸어요해요.
+    /// 그쪽으로 한 칸 걸어요.
     Move(Dir),
     /// 발밑의 열매를 집어요. (새로!)
-    Pick,
+    Harvest,
     /// 들고 있는 열매를 내려놓아요. 창고 위라면 배달 완료! (새로!)
-    Drop,
+    Store,
 }
 
-/// 방향. 농부는 몸을 돌리지 않고 어느 쪽으로든 걸어요해요.
+/// 방향. 농부는 몸을 돌리지 않고 어느 쪽으로든 걸어요.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Dir {
     North,

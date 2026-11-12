@@ -4,12 +4,12 @@
 
 **새로 생긴 것**
 
-- `Action::Pick` — 발밑의 열매를 집어요.
-- `Action::Drop` — 들고 있는 열매를 내려놓아요. 창고 위라면 배달 완료!
+- `Action::Harvest` — 발밑의 열매를 집어요.
+- `Action::Store` — 들고 있는 열매를 내려놓아요. 창고 위라면 배달 완료!
 - `view.here()` — 발밑 칸. `Tile::Soil`, `Tile::Crop`, `Tile::Barn` 중 하나예요.
 - `view.carrying()` — 열매를 들고 있으면 `true`.
 
-`Pick` 도 `Wait` 처럼 **값**이에요. `tick` 이 `Action::Pick` 을 돌려주면 게임이 그 틱에 열매를 집어 줘요.
+`Harvest` 도 `Wait` 처럼 **값**이에요. `tick` 이 `Action::Harvest` 을 돌려주면 게임이 그 틱에 열매를 집어 줘요.
 
 Rust 의 `if` 는 값을 돌려줄 수 있어서, 갈래마다 `Action` 을 하나씩 두면 그게 `tick` 의 답이 돼요.
 
@@ -17,7 +17,7 @@ Rust 의 `if` 는 값을 돌려줄 수 있어서, 갈래마다 `Action` 을 하�
 if view.carrying() {
     // 들고 있을 때
 } else if view.here() == Tile::Crop {
-    Action::Pick
+    Action::Harvest
 } else {
     Action::Move(Dir::East)
 }

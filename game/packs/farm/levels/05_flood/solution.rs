@@ -13,11 +13,11 @@ impl Farmer for Pip {
 
     fn tick(&mut self, view: &View) -> Action {
         if !view.carrying() && view.here() == Tile::Crop {
-            return Action::Pick;
+            return Action::Harvest;
         }
         let target = if view.carrying() { view.barn_dir() } else { view.crop_dir() };
         let Some(dir) = target else {
-            return if view.carrying() { Action::Drop } else { Action::Wait };
+            return if view.carrying() { Action::Store } else { Action::Wait };
         };
         // 논에 처음 발을 들이기 전에 수위를 본다.
         let entering = view.here() != Tile::Paddy && matches!(view.look(dir), Tile::Paddy | Tile::Water);

@@ -15,7 +15,7 @@ impl Farmer for Pip {
 
     fn tick(&mut self, view: &View) -> Action {
         if !view.carrying() && view.here() == Tile::Crop {
-            return Action::Pick;
+            return Action::Harvest;
         }
         let target = if view.carrying() { view.barn_dir() } else { view.crop_dir() };
         match target {
@@ -23,7 +23,7 @@ impl Farmer for Pip {
             Some(dir) => Action::Move(dir),
             None if view.carrying() => {
                 println!("{}번 농부 배달!", self.id);
-                Action::Drop
+                Action::Store
             }
             None => Action::Wait,
         }

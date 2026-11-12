@@ -14,12 +14,12 @@ impl Farmer for Pip {
     fn tick(&mut self, view: &View) -> Action {
         if view.carrying() {
             if view.here() == Tile::Barn {
-                Action::Drop
+                Action::Store
             } else {
                 Action::Move(Dir::West)
             }
         } else if view.here() == Tile::Crop {
-            Action::Pick
+            Action::Harvest
         } else {
             Action::Move(Dir::East)
         }

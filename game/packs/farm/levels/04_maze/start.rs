@@ -15,10 +15,10 @@ impl Farmer for Pip {
         if view.carrying() {
             match view.barn_dir() {
                 Some(dir) => Action::Move(dir),
-                None => Action::Drop,
+                None => Action::Store,
             }
         } else if view.here() == Tile::Crop {
-            Action::Pick
+            Action::Harvest
         } else {
             match view.crop_dir() {
                 Some(dir) => Action::Move(dir),

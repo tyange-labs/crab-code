@@ -17,11 +17,11 @@ impl Farmer for Pip {
         if view.carrying() {
             return match view.barn_dir() {
                 Some(dir) => Action::Move(dir),
-                None => Action::Drop,
+                None => Action::Store,
             };
         }
         if view.here() == Tile::Crop {
-            return Action::Pick;
+            return Action::Harvest;
         }
         if let Some(dir) = view.crop_dir() {
             return Action::Move(dir);

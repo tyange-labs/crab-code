@@ -6,7 +6,10 @@ art/sunnyside/ 의 원본 PNG 를 잘라 붙여 view/assets/ 에 쓴다. (Pillow
 
 만드는 것
   tiles.png        16x16 타일 13개 (view.gd 의 enum Tile 순서)
-  crop.png         16x16 열매 2프레임
+  plants.png       16x16 작물 6종 × 자라는 6단계 (줄 = 작물, 칸 = 0 씨앗 … 5 다 자람)
+  deco_*.png       동물·풍차·나무 같은 장식 (원본 그대로 가로 줄)
+  exp_*.png        말풍선 아이콘 (놀람·하트·물음표·일하는 중·땀)
+  hud_box.png      HUD 상자용 9칸 그림 (9x9, 모서리 3px)
   farmer_N.png     24x24 농부: 1줄 걷기 8프레임, 2줄 들고 걷기 8프레임, 3줄 가만히 9프레임
   goblin.png       24x24 고블린: 1줄 걷기 8프레임, 2줄 가만히 9프레임
 """
@@ -49,20 +52,63 @@ def build_tiles():
     water1 = sheet.crop((176, 288, 192, 304)).transpose(Image.FLIP_LEFT_RIGHT)
     flood = [Image.new("RGBA", (16, 16), (40, 140, 230, 150)), Image.new("RGBA", (16, 16), (70, 170, 240, 150))]
     crate = over(soil[0], sheet.crop((567, 144, 583, 160)))
-    tiles = grass + soil + paddy + [bush, berry, water0, water1] + flood + [crate]
+    # 이랑: 흙을 어둡게 하고 줄을 번갈아 밝게·어둡게 그어 갈아 놓은 밭처럼
+    plot = Image.new("RGBA", (16, 16), (150, 98, 62, 255))
+    for y in range(16):
+        shade = (176, 118, 76, 255) if y % 5 in (1, 2) else (126, 80, 50, 255) if y % 5 == 4 else (150, 98, 62, 255)
+        for x in range(16):
+            plot.putpixel((x, y), shade)
+    tiles = grass + soil + paddy + [bush, berry, water0, water1] + flood + [crate, plot]
     atlas = Image.new("RGBA", (16 * len(tiles), 16))
     for i, t in enumerate(tiles):
         atlas.paste(t, (i * 16, 0))
     atlas.save(OUT / "tiles.png")
 
 
-def build_crop():
-    sheet = load(SRC / "tileset_16px.png")
-    pumpkin = sheet.crop((848, 268, 864, 284))
-    strip = Image.new("RGBA", (32, 16))
-    strip.paste(pumpkin, (0, 0))
-    strip.alpha_composite(pumpkin, (16, -1))
-    strip.save(OUT / "crop.png")
+KINDS = ["pumpkin", "carrot", "cabbage", "cauliflower", "radish", "sunflower"]
+
+
+def build_plants():
+    """작물 한 종의 자라는 6단계를 16x16 칸 아래쪽 가운데에 맞춰 한 줄로."""
+    sheet = Image.new("RGBA", (16 * 6, 16 * len(KINDS)))
+    for row, kind in enumerate(KINDS):
+        for stage in range(6):
+            im = load(SRC / "Crops" / f"{kind}_{stage:02d}.png")
+            sheet.alpha_composite(im, (stage * 16 + (16 - im.width) // 2, row * 16 + (16 - im.height) - 1))
+    sheet.save(OUT / "plants.png")
+
+
+DECOR = {
+    "Animals/spr_deco_cow_strip4.png": "deco_cow.png",
+    "Animals/spr_deco_sheep_01_strip4.png": "deco_sheep.png",
+    "Animals/spr_deco_pig_01_strip4.png": "deco_pig.png",
+    "Animals/spr_deco_chicken_01_strip4.png": "deco_chicken.png",
+    "Animals/spr_deco_duck_01_strip4.png": "deco_duck.png",
+    "Animals/spr_deco_bird_01_strip4.png": "deco_bird.png",
+    "Other/spr_deco_windmill_withshadow_strip9.png": "deco_windmill.png",
+    "Plants/spr_deco_tree_01_strip4.png": "deco_tree1.png",
+    "Plants/spr_deco_tree_02_strip4.png": "deco_tree2.png",
+    "Plants/spr_deco_mushroom_red_01_strip4.png": "deco_mushroom.png",
+    "VFX/spr_deco_glint_01_strip6.png": "deco_glint.png",
+    "UI/expression_alerted.png": "exp_alert.png",
+    "UI/expression_love.png": "exp_love.png",
+    "UI/expression_confused.png": "exp_confused.png",
+    "UI/expression_working.png": "exp_working.png",
+    "UI/expression_stress.png": "exp_stress.png",
+    "UI/water.png": "icon_water.png",
+    "UI/plant.png": "icon_plant.png",
+    "UI/stopwatch.png": "icon_clock.png",
+}
+
+
+def build_decor():
+    for src, name in DECOR.items():
+        load(SRC / src).save(OUT / name)
+    names = ["tl", "tc", "tr", "lc", "c", "rc", "bl", "bc", "br"]
+    box = Image.new("RGBA", (9, 9))
+    for i, n in enumerate(names):
+        box.paste(load(SRC / "UI" / f"dt_box_9slice_{n}.png"), ((i % 3) * 3, (i // 3) * 3))
+    box.save(OUT / "hud_box.png")
 
 
 def strip_frames(path, n):
@@ -103,7 +149,8 @@ def build_goblin():
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     build_tiles()
-    build_crop()
+    build_plants()
+    build_decor()
     build_farmers()
     build_goblin()
     print("done:", OUT)

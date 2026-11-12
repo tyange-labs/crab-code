@@ -11,7 +11,7 @@ pub(crate) mod world;
 
 use out::Json;
 use std::fmt::Debug;
-use world::{Dir, CropState, Ground, Mishap, Field, Flood as T};
+use world::{Dir, CropState, Ground, Mishap, Field, Flood as T, PlotStage};
 
 /// 게임 창과 주고받는 줄의 머리. 이 글자로 시작하지 않는 줄은 플레이어의 `println!` 이다.
 const PREFIX: &str = "\u{1}crab ";
@@ -39,6 +39,7 @@ fn map_json(p: &Field) -> Json {
             Ground::Water => 'w',
             Ground::Paddy => '~',
             Ground::Barn => 'N',
+            Ground::Plot => 'p',
         })
         .collect();
     let mut flood = Json::object();
@@ -89,6 +90,16 @@ fn frame_json(p: &Field) -> Json {
         j.num("x", f.x).num("y", f.y);
         j
     });
+    let plots = p.plots.iter().map(|k| {
+        let mut j = Json::object();
+        j.num("x", k.x).num("y", k.y);
+        match k.stage {
+            PlotStage::Empty => j.str("stage", "empty"),
+            PlotStage::Seeded => j.str("stage", "seed"),
+            PlotStage::Growing { left } => j.str("stage", "sprout").num("left", left),
+        };
+        j
+    });
     let goblins = p.goblins.iter().map(|g| {
         let mut j = Json::object();
         j.num("x", g.x).num("y", g.y).str("dir", dir_code(g.dir));
@@ -107,6 +118,7 @@ fn frame_json(p: &Field) -> Json {
         .json("flood", flood)
         .array("farmers", farmers)
         .array("crops", crops)
+        .array("plots", plots)
         .array("goblins", goblins)
         .array("events", events);
     frame

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b7tsh0agc2ygs"
-path="res://.godot/imported/crop.png-09deb8766d47c29822f1e0e15d00efe9.ctex"
+uid="uid://dmxxshtffrgld"
+path="res://.godot/imported/exp_stress.png-5860ff7cbcd4a86c2c8861587babeb80.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://packs/farm/view/assets/crop.png"
-dest_files=["res://.godot/imported/crop.png-09deb8766d47c29822f1e0e15d00efe9.ctex"]
+source_file="res://packs/farm/view/assets/exp_stress.png"
+dest_files=["res://.godot/imported/exp_stress.png-5860ff7cbcd4a86c2c8861587babeb80.ctex"]
 
 [params]
 
