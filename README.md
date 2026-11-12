@@ -12,7 +12,7 @@ Rust 로 게임 속 세계를 움직이며 Rust 를 배우는 게임. 지금 들
     진공 enum → 경비 드론과 여러 대 → 설치·충전(튜플 match) → 회수 작전(Vec) …. 23개 레벨 (8: Vec·반복자, 9: 로봇 3대와 enum 으로 나눈 일,
     10: impl 로 코드 나누기, 11: trait 로 만든 작업 목록, 12: Result 와 ?, 13: HashMap 으로 지도 기억하기, 14: static·Mutex 통신 채널, 15: &str·라이프타임으로 레이더 글 해독, 16: Rc·RefCell 로 장부 공유, 17: 스레드·채널로 경로 계산, 18: 제네릭과 trait 경계, 19: Iterator 직접 구현, 20: 키카드·잠긴 문(데이터를 품은 enum), 21: FromStr·에러 타입·From, 22: 에너지 규칙·참조를 품은 구조체와 라이프타임, 23: 클로저와 Fn 경계). 그림은 전부 코드로 그린다(`game/packs/station/art/draw.py`).
 
-  옛 팩(조수 웅덩이, 퍼즐, 해바라기 농장)은 `game/packs-archive/` 에 보관해 두었다. `game/packs/` 로 옮기면 다시 목록에 뜬다.
+  옛 팩(조수 웅덩이, 퍼즐, 해바라기 농장)도 `game/packs/` 에 있지만 `pack.json` 에 `"archived": true` 라서 목록에서 숨겨진다 (`CRAB_SHOW_ARCHIVED=1` 이면 보인다). 팩 분류는 `game/packs/README.md`.
 
 ## 실행
 
@@ -130,4 +130,4 @@ rustc 가 "그런 변형/메서드는 없다" 고 알려 준다. 세계 시뮬�
 ## 그림 출처
 
 - Kenney 1-Bit Pack (CC0, 선택 표시 아이콘), Galmuri (OFL, 글꼴). 정거장 팩의 나머지 그림은 코드로 그렸다.
-- 보관 중인 해바라기 농장 팩의 그림은 Sunnyside World (danieldiggle, itch.io) 에서 가져온 것이다. 조건은 `game/packs-archive/farm/art/sunnyside/README.md` 참고.
+- 보관 중인 해바라기 농장 팩의 그림은 Sunnyside World (danieldiggle, itch.io) 에서 가져온 것이다. 조건은 `game/packs/farm/art/sunnyside/README.md` 참고.

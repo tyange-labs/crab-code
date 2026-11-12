@@ -94,5 +94,6 @@
       "to": 51
     }
   ],
-  "tick": "행동"
+  "tick": "행동",
+  "archived": true
 }

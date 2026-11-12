@@ -118,6 +118,8 @@ pub fn list(packs_dir: &Path) -> Vec<Pack> {
         .filter_map(|e| e.ok())
         .filter(|e| e.path().join("pack.json").exists())
         .filter_map(|e| load(&e.path()).ok())
+        // pack.json 에 "archived": true 인 보관 팩은 목록에서 숨긴다 (CRAB_SHOW_ARCHIVED=1 이면 보인다).
+        .filter(|p| !p.meta["archived"].as_bool().unwrap_or(false) || std::env::var("CRAB_SHOW_ARCHIVED").is_ok())
         .collect();
     packs.sort_by(|a, b| a.id.cmp(&b.id));
     packs
