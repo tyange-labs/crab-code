@@ -123,7 +123,12 @@ static func build() -> Theme:
 	chip.call("ChipDone", Palette.GREEN_BG, Palette.GREEN)
 
 	# 패널
-	t.set_stylebox("panel", "PanelContainer", box(Palette.PANEL, 12, 16, 14))
+	var panel := sprite_box("res://assets/ui_panel.png")
+	panel.content_margin_left = 16
+	panel.content_margin_right = 16
+	panel.content_margin_top = 14
+	panel.content_margin_bottom = 14
+	t.set_stylebox("panel", "PanelContainer", panel)
 	t.set_type_variation("EditorPanel", "PanelContainer")
 	t.set_stylebox("panel", "EditorPanel", box(Palette.EDITOR, 12, 0, 0))
 

@@ -112,10 +112,16 @@ def build_decor():
     # 게임 본체의 버튼 상자 (팩과 상관없이 쓰므로 game/assets/ 에): 밝은 상자·갈색 상자
     ui = HERE.parent.parent.parent / "assets"
     ui.mkdir(exist_ok=True)
-    for prefix, name in (("lt", "ui_btn.png"), ("dt", "ui_btn_down.png")):
+    for prefix, name in (("lt", "ui_btn.png"), ("dt", "ui_btn_down.png"), ("w", "ui_panel.png")):
         b = Image.new("RGBA", (9, 9))
         for i, n in enumerate(names):
             b.paste(load(SRC / "UI" / f"{prefix}_box_9slice_{n}.png"), ((i % 3) * 3, (i // 3) * 3))
+        if prefix == "w":  # 밝은 테마의 크림색 종이에 맞게 속 색만 바꾼다 (검은 테두리·흰 하이라이트는 그대로)
+            fill = b.getpixel((4, 4))
+            for y in range(9):
+                for x in range(9):
+                    if b.getpixel((x, y)) == fill:
+                        b.putpixel((x, y), (255, 250, 240, 255))
         b.save(ui / name)
 
 

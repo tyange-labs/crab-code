@@ -527,6 +527,27 @@ pub const SPECS: &[Spec] = &[
         respawn: false,
         reach: false,
     },
+    Spec {
+        id: "thieves",
+        map: &[
+            "###############",
+            "#N............#",
+            "#.....G.....G.#",
+            "#.p.p.p.p.p.p.#",
+            "#g............#",
+            "#.p.p.p.p.p.p.#",
+            "#.............#",
+            "###############",
+        ],
+        farmers: 3,
+        goal: 9,
+        max_ticks: 220,
+        smell: u32::MAX,
+        flood: None,
+        random_crop: 0,
+        respawn: false,
+        reach: false,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();

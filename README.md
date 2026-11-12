@@ -9,11 +9,9 @@ Rust 로 게임 속 세계를 움직이며 Rust 를 배우는 게임. 지금 들
 - 작업 폴더는 git 저장소다. 레벨을 깨면 커밋이 남고, 최고 기록에는 `best/<팩>/<레벨>` 태그가 붙는다.
 - 게임 자체는 **게임팩** 으로 갈아끼운다 (`game/packs/<id>/` 폴더 하나가 팩 하나, 폴더를 넣고 빼면 된다). 지금 들어 있는 팩:
   - **해바라기 농장** (`farm`) — `Farmer` 트레이트를 구현해 농부의 두뇌를 만든다. 걷기 → 거두기·넣기 → Option → 필드와 &mut self →
-    홍수 enum → 고블린과 여러 명 → 씨 뿌리고 물 주기(튜플 match) → 수확 철(Vec). 9개 레벨 (8: Vec·반복자로 가장 가까운 열매 찾기, 9: 농부 3명과 enum 으로 나눈 일). 그림은 Sunnyside World (아래 출처).
-  - **조수 웅덩이** (`tidepool`) — `Crab` 트레이트를 구현해 꽃게의 두뇌를 만든다. 처음엔 걷기만, 레벨마다 쓸 수 있는 것이
-    하나씩 늘어난다 (집기·내려놓기 → Option → 필드와 &mut self → 물때 enum → 갈매기와 여러 마리). 6개 레벨.
-  - **퍼즐** (`puzzle`) — 꽃게 한 마리를 `move_forward()` 같은 함수로 움직인다. 『프로그래밍 러스트』 2~17장 순서, 51개 레벨.
-    처음엔 `move_forward()`·`collect()` 뿐이고, 레벨마다 쓸 수 있는 함수가 늘어난다.
+    홍수 enum → 고블린과 여러 명 → 씨 뿌리고 물 주기(튜플 match) → 수확 철(Vec). 10개 레벨 (8: Vec·반복자로 가장 가까운 열매 찾기, 9: 농부 3명과 enum 으로 나눈 일, 10: impl 로 코드 나누기). 그림은 Sunnyside World (아래 출처).
+
+  꽃게 이야기였던 옛 팩(조수 웅덩이, 퍼즐)은 `game/packs-archive/` 에 보관해 두었다. `game/packs/` 로 옮기면 다시 목록에 뜬다.
 
 ## 실행
 
@@ -32,8 +30,8 @@ godot --path game                        # 게임 실행
 
 ```
 ~/SproutCode/
-  tidepool/levels/04_tide.rs   ← 이런 파일을 고치고 저장한다
-  puzzle/levels/03_for.rs
+  farm/levels/04_maze.rs   ← 이런 파일을 고치고 저장한다
+  farm/levels/07_sow.rs
   .crab/packs/                 게임팩 소스 (IDE 에서 F12 로 정의를 보면 여기로 온다. 게임이 관리한다)
   .crab/progress.json          클리어 기록
 ```
@@ -88,7 +86,7 @@ game/packs/<id>/
 ```
 
 **레벨마다 API 를 하나씩 연다.** 두 팩 모두 같은 방식이다. 예를 들어 조수 웅덩이 팩은 레벨마다 모듈(`level1.rs` … `level6.rs`)을 두고, 레벨 파일은
-`use tidepool::level3::*;` 처럼 자기 레벨 모듈만 가져온다. 모듈에는 그 레벨에서 쓸 수 있는 `Crab`·`View`·`Action`·`Dir`·`Tile`
+`use farm::level3::*;` 처럼 자기 레벨 모듈만 가져온다. 모듈에는 그 레벨에서 쓸 수 있는 `Farmer`·`View`·`Action`·`Dir`·`Tile`
 만 짧게 정의돼 있고 새로 생긴 것에는 `(새로!)` 가 붙는다. 그래서 IDE 의 F12 가 그 짧은 파일로 가고, 아직 안 배운 것을 쓰면
 rustc 가 "그런 변형/메서드는 없다" 고 알려 준다. 세계 시뮬레이션은 숨은 `engine` 모듈에 있고, `engine/bridge.rs` 가
 레벨 타입과 엔진 타입을 서로 바꾼다.
