@@ -1034,6 +1034,32 @@ pub const SPECS: &[Spec] = &[
         briefing: "",
         energy: 20,
     },
+    Spec {
+        id: "closure",
+        map: &[
+            "###############",
+            "#N............#",
+            "#...?.....?...#",
+            "#.....G.G.....#",
+            "#.?...........#",
+            "#..........?..#",
+            "#.............#",
+            "#...?.....?...#",
+            "###############",
+        ],
+        bots: 1,
+        goal: 5,
+        max_ticks: 150,
+        smell: 0,
+        pressure: None,
+        random_core: 5,
+        respawn: false,
+        reach: false,
+        slot_sense: true,
+        sight: 40,
+        briefing: "",
+        energy: 0,
+    },
 ];
 
 pub const LEVEL_COUNT: usize = SPECS.len();
