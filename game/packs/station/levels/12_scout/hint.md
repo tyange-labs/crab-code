@@ -1,0 +1,1 @@
+발밑을 먼저 보고(`Slot` → `Install`, `Module` → `Charge`, `Core` 이고 빈손 → `Grab`, 반응로에서 들고 있으면 `Insert`), 코어를 들고 있으면 `reactor_dir()` 로 가요. 빈손이면 `for y in 0..h { for x in 0..w { … } }` 로 모든 칸에 `worth_a_visit(view, x, y).unwrap_or(false)` 를 물어서, 가장 가까운(맨해튼 거리 `(x - px).abs() + (y - py).abs()`) 칸으로 걸어가세요.

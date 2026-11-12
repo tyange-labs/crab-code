@@ -1,0 +1,1 @@
+`Job::Tend` 일 때는 발밑이 `Slot` 이면 설치하고, `Module` 이면 충전하고, `Core` 이면 집으면서 `self.job = Job::Deliver`. 걸어갈 곳은 `view.core_dir().or(view.slot_dir())`. `Job::Deliver` 일 때는 `reactor_dir()` 로 가다가 반응로에서 `Insert` 하고 `self.job = Job::Tend` 로 돌아와요.

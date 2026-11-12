@@ -32,7 +32,7 @@ func _initialize() -> void:
 	OS.set_environment("CRAB_START_LEVEL", "1")
 	var pack_id := OS.get_environment("CRAB_PACK")
 	if pack_id == "":
-		pack_id = "farm"
+		pack_id = "station"
 		OS.set_environment("CRAB_PACK", pack_id)
 	var through_dialog := OS.get_environment("CRAB_TEST_SETUP") != ""
 	if not through_dialog:

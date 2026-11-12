@@ -1,6 +1,6 @@
-# Sprout Code
+# Reboot Code
 
-Rust 로 게임 속 세계를 움직이며 Rust 를 배우는 게임. 지금 들어 있는 주 게임팩은 **해바라기 농장**: 코드로 농부를 움직여 씨를 뿌리고 열매를 거둔다. 코드는 **내가 쓰는 IDE** 에서 짠다.
+Rust 로 게임 속 세계를 움직이며 Rust 를 배우는 게임. 지금 들어 있는 주 게임팩은 **정거장 복구**: 버려진 우주정거장에서 코드로 정비 로봇을 움직여 반응로를 되살린다. 코드는 **내가 쓰는 IDE** 에서 짠다.
 
 - 게임은 화면만 맡는다. 코드는 작업 폴더(진짜 cargo 워크스페이스)에 있고, VS Code·RustRover·Zed 등
   아무 IDE 로 열면 rust-analyzer 의 자동 완성·정의로 이동·에러 표시가 그대로 된다.
@@ -8,10 +8,11 @@ Rust 로 게임 속 세계를 움직이며 Rust 를 배우는 게임. 지금 들
   타임라인으로 아무 틱이나 돌려 보고, 행위자를 눌러 그 순간 `tick()` 이 고른 행동과 `{:?}` 상태를 볼 수 있다.
 - 작업 폴더는 git 저장소다. 레벨을 깨면 커밋이 남고, 최고 기록에는 `best/<팩>/<레벨>` 태그가 붙는다.
 - 게임 자체는 **게임팩** 으로 갈아끼운다 (`game/packs/<id>/` 폴더 하나가 팩 하나, 폴더를 넣고 빼면 된다). 지금 들어 있는 팩:
-  - **해바라기 농장** (`farm`) — `Farmer` 트레이트를 구현해 농부의 두뇌를 만든다. 걷기 → 거두기·넣기 → Option → 필드와 &mut self →
-    홍수 enum → 고블린과 여러 명 → 씨 뿌리고 물 주기(튜플 match) → 수확 철(Vec). 14개 레벨 (8: Vec·반복자로 가장 가까운 열매 찾기, 9: 농부 3명과 enum 으로 나눈 일, 10: impl 로 코드 나누기, 11: trait 로 만든 일 목록, 12: Result 와 ? 로 하는 정찰, 13: HashMap 으로 지도 기억하기, 14: static·Mutex 게시판). 그림은 Sunnyside World (아래 출처).
+  - **정거장 복구** (`station`) — `Bot` 트레이트를 구현해 정비 로봇의 두뇌를 만든다. 걷기 → 집기·장착 → Option → 필드와 &mut self →
+    진공 enum → 경비 드론과 여러 대 → 설치·충전(튜플 match) → 회수 작전(Vec) …. 14개 레벨 (8: Vec·반복자, 9: 로봇 3대와 enum 으로 나눈 일,
+    10: impl 로 코드 나누기, 11: trait 로 만든 작업 목록, 12: Result 와 ?, 13: HashMap 으로 지도 기억하기, 14: static·Mutex 통신 채널). 그림은 전부 코드로 그린다(`game/packs/station/art/draw.py`).
 
-  꽃게 이야기였던 옛 팩(조수 웅덩이, 퍼즐)은 `game/packs-archive/` 에 보관해 두었다. `game/packs/` 로 옮기면 다시 목록에 뜬다.
+  옛 팩(조수 웅덩이, 퍼즐, 해바라기 농장)은 `game/packs-archive/` 에 보관해 두었다. `game/packs/` 로 옮기면 다시 목록에 뜬다.
 
 ## 실행
 
@@ -23,20 +24,20 @@ godot --headless --path game --import    # 처음 한 번 (스크립트 클래�
 godot --path game                        # 게임 실행
 ```
 
-처음 실행하면 작업 폴더를 만드는 창이 뜬다: 위치(기본 `~/SproutCode`)와 **커밋에 쓸 이름·이메일** 을 정한다.
+처음 실행하면 작업 폴더를 만드는 창이 뜬다: 위치(기본 `~/RebootCode`)와 **커밋에 쓸 이름·이메일** 을 정한다.
 이름·이메일은 그 작업 폴더 저장소에만 설정되고(전역 git 설정은 그대로), 작업 폴더에서는 커밋 서명을 끈다
 (혼자 보는 학습 기록이라 필요 없고, 서명 키 암호를 묻느라 게임이 멈추면 안 되므로).
 그다음 게임의 **IDE 로 열기** 를 누르거나 직접 그 폴더를 IDE 로 연다.
 
 ```
-~/SproutCode/
-  farm/levels/04_maze.rs   ← 이런 파일을 고치고 저장한다
-  farm/levels/07_sow.rs
+~/RebootCode/
+  station/levels/04_maze.rs   ← 이런 파일을 고치고 저장한다
+  station/levels/07_install.rs
   .crab/packs/                 게임팩 소스 (IDE 에서 F12 로 정의를 보면 여기로 온다. 게임이 관리한다)
   .crab/progress.json          클리어 기록
 ```
 
-터미널에서 직접 돌려 볼 수도 있다: `cd ~/SproutCode && cargo run --bin tide` (결과가 글로 나온다).
+터미널에서 직접 돌려 볼 수도 있다: `cd ~/RebootCode && cargo run --bin tide` (결과가 글로 나온다).
 
 환경 변수:
 
@@ -86,7 +87,7 @@ game/packs/<id>/
 ```
 
 **레벨마다 API 를 하나씩 연다.** 두 팩 모두 같은 방식이다. 예를 들어 조수 웅덩이 팩은 레벨마다 모듈(`level1.rs` … `level6.rs`)을 두고, 레벨 파일은
-`use farm::level3::*;` 처럼 자기 레벨 모듈만 가져온다. 모듈에는 그 레벨에서 쓸 수 있는 `Farmer`·`View`·`Action`·`Dir`·`Tile`
+`use station::level3::*;` 처럼 자기 레벨 모듈만 가져온다. 모듈에는 그 레벨에서 쓸 수 있는 `Bot`·`View`·`Action`·`Dir`·`Tile`
 만 짧게 정의돼 있고 새로 생긴 것에는 `(새로!)` 가 붙는다. 그래서 IDE 의 F12 가 그 짧은 파일로 가고, 아직 안 배운 것을 쓰면
 rustc 가 "그런 변형/메서드는 없다" 고 알려 준다. 세계 시뮬레이션은 숨은 `engine` 모듈에 있고, `engine/bridge.rs` 가
 레벨 타입과 엔진 타입을 서로 바꾼다.
@@ -127,6 +128,5 @@ rustc 가 "그런 변형/메서드는 없다" 고 알려 준다. 세계 시뮬�
 
 ## 그림 출처
 
-- **Sunnyside World** by danieldiggle — https://danieldiggle.itch.io/sunnyside (해바라기 농장 팩의 타일·캐릭터·작물·동물·UI).
-  원본은 `game/packs/farm/art/sunnyside/` 에 있고, `python3 game/packs/farm/art/sunnyside.py` 가 게임용 그림을 만든다. 조건은 그 폴더의 README 참고.
-- Kenney 1-Bit Pack (CC0), Galmuri (OFL).
+- Kenney 1-Bit Pack (CC0, 선택 표시 아이콘), Galmuri (OFL, 글꼴). 정거장 팩의 나머지 그림은 코드로 그렸다.
+- 보관 중인 해바라기 농장 팩의 그림은 Sunnyside World (danieldiggle, itch.io) 에서 가져온 것이다. 조건은 `game/packs-archive/farm/art/sunnyside/README.md` 참고.

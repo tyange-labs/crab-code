@@ -8,7 +8,7 @@ fn git(root: &Path) -> Command {
     cmd.arg("-C").arg(root);
     // 이름·이메일이 어디에도 설정되지 않은 컴퓨터에서도 커밋이 되도록 기본값을 준다.
     if !configured(root, "user.name") {
-        cmd.args(["-c", "user.name=Sprout Code"]);
+        cmd.args(["-c", "user.name=Reboot Code"]);
     }
     if !configured(root, "user.email") {
         cmd.args(["-c", "user.email=crab-code@localhost"]);

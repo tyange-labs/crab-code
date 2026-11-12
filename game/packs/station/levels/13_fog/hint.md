@@ -1,0 +1,1 @@
+틱마다 (1) 주변을 훑어 `seen` 에 기록 (2) 발밑이 `Slot`/`Module`/`Core`(빈손)/`Reactor`(들고 있음) 이면 `Install`/`Charge`/`Grab`/`Insert` (3) 들고 있으면 `reactor_dir()` (4) 아니면 `seen` 에서 가장 가까운 슬롯·코어로, 없으면 아직 못 본 가장 가까운 칸으로 가요. 걸을 때는 8레벨처럼 `x`, `y` 를 비교해 방향을 골라요.

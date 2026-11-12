@@ -61,7 +61,7 @@ pub struct CrabCore {
 
 #[godot_api]
 impl CrabCore {
-    /// 기본 작업 폴더 (~/SproutCode, CRAB_WORKSPACE 로 바꿀 수 있다).
+    /// 기본 작업 폴더 (~/RebootCode, CRAB_WORKSPACE 로 바꿀 수 있다).
     #[func]
     fn default_workspace(&self) -> GString {
         GString::from(&workspace::default_root().to_string_lossy().to_string())

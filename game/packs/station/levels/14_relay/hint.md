@@ -1,0 +1,1 @@
+`Echo { claim: Option<(i32, i32)> }` 에 맡은 슬롯을 적어 두세요. 맡은 게 없으면 지도 전체를 훑어 `Tile::Slot` 이면서 `BOARD` 에 없는 가장 가까운 칸을 골라 `BOARD.lock().unwrap().push(칸)` 하고 `self.claim = Some(칸)`. 코어를 집을 때 `board.retain(|&c| c != 칸)` 으로 지워요. 맡은 칸에 서 있고 `Tile::Booting` 이면 `Action::Wait`.

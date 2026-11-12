@@ -1,0 +1,1 @@
+먼저 발밑을 보고 할 일을 정해요. `(Tile::Slot, _)` 이면 설치하고, `(Tile::Module, _)` 이면 충전하고, `(Tile::Core, false)` 면 집고, `(Tile::Reactor, true)` 면 반응로에 넣어요. 어디에도 안 걸리면 걸어갈 곳을 `slot_dir()` 와 `core_dir()` 로 고르세요. 코어를 들고 있으면 `reactor_dir()` 로 가요.
