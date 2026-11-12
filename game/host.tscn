@@ -357,10 +357,21 @@ size_flags_horizontal = 3
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ConsoleLabel" type="Label" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox"]
+[node name="Tabs" type="HBoxContainer" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="TabOutput" type="Button" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox/Tabs"]
 unique_name_in_owner = true
 layout_mode = 2
+focus_mode = 0
 text = "출력"
+
+[node name="TabProblems" type="Button" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox/Tabs"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "문제"
 
 [node name="Console" type="RichTextLabel" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox"]
 unique_name_in_owner = true
@@ -369,6 +380,19 @@ size_flags_vertical = 3
 bbcode_enabled = true
 scroll_following = true
 selection_enabled = true
+
+[node name="ProblemsScroll" type="ScrollContainer" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Problems" type="VBoxContainer" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox/ProblemsScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
 
 [node name="Inspector" type="PanelContainer" parent="Margin/Root/Body/Right/Bottom"]
 unique_name_in_owner = true

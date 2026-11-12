@@ -89,6 +89,10 @@ func _ready() -> void:
 	%ResetCancel.pressed.connect(func(): %ResetCard.visible = false)
 	%Sound.pressed.connect(_toggle_sound)
 	%StatusAction.pressed.connect(_on_status_action)
+	%TabOutput.pressed.connect(func(): _show_tab("output"))
+	%TabProblems.pressed.connect(func(): _show_tab("problems"))
+	_render_problems([])
+	_show_tab("output")
 	var more: PopupMenu = %More.get_popup()
 	more.add_item("IDE 로 열기", MoreItem.OPEN_IDE)
 	more.add_item("작업 폴더 열기", MoreItem.OPEN_FOLDER)
@@ -140,7 +144,7 @@ func _ready() -> void:
 
 func _style_static_nodes() -> void:
 	%LessonTitle.theme_type_variation = "PixelTitle"
-	for l in [%Progress, %ChapterName, %ConsoleLabel, %TickLabel, %StatusTitle, %GoalLabel, %InspectorLabel, %Slash]:
+	for l in [%Progress, %ChapterName, %TickLabel, %StatusTitle, %GoalLabel, %InspectorLabel, %Slash]:
 		l.add_theme_font_override("font", Palette.pixel_font())
 	%Slash.add_theme_color_override("font_color", Palette.TEXT3)
 	%Slash.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
@@ -187,8 +191,6 @@ func _style_static_nodes() -> void:
 	%More.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%TickLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%TickLabel.add_theme_color_override("font_color", Palette.DIM)
-	%ConsoleLabel.add_theme_color_override("font_color", Palette.DIM)
-	%ConsoleLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%Console.add_theme_font_override("normal_font", Palette.code_font())
 	%Console.add_theme_font_size_override("normal_font_size", 13)
 	%Console.add_theme_constant_override("line_separation", 3)
@@ -709,9 +711,11 @@ func _on_run_result(r: Dictionary) -> void:
 		return
 	%Console.clear()
 	_first_error = {}
+	_render_problems(r.get("diagnostics", []))
 	if not r.compiled:
 		result = {}
 		_update_marks()
+		_render_inspector()
 		# 코드가 컴파일되지 않아도 레벨의 처음 모습은 보여 준다.
 		if r.has("preview"):
 			view.setup(r.preview.map, r.preview.frames)
@@ -727,6 +731,7 @@ func _on_run_result(r: Dictionary) -> void:
 		if not _first_error.is_empty():
 			where = "%s:%d · %s" % [String(_first_error.file).get_file(), _first_error.line, String(_first_error.message).split("\n")[0]]
 		phase = "failed"
+		_show_tab("problems")
 		_status("error", "컴파일 에러 %d개" % maxi(errors, 1), where, "error" if not _first_error.is_empty() else "")
 		if autoplay:
 			Sfx.play("fail")
@@ -735,6 +740,7 @@ func _on_run_result(r: Dictionary) -> void:
 		# 첫 모습도 나오기 전에 멈췄다 (시작하자마자 패닉, 시간 초과 등).
 		result = {}
 		_update_marks()
+		_render_inspector()
 		if r.has("preview"):
 			view.setup(r.preview.map, r.preview.frames)
 		for log in r.logs:
@@ -743,6 +749,7 @@ func _on_run_result(r: Dictionary) -> void:
 		_sync_timeline()
 		return
 	result = r
+	_show_tab("output")
 	view.setup(r.map, r.frames)
 	_update_marks()
 	_shown_tick = -1
@@ -959,6 +966,86 @@ func _agent_tag(tick: int, agent: int) -> String:
 
 
 ## 지금 틱까지 일어난 출력·사건을 시간 순서로 보여 준다.
+## 출력 / 문제 탭
+func _show_tab(tab: String) -> void:
+	%Console.visible = tab == "output"
+	%ProblemsScroll.visible = tab == "problems"
+	for pair in [[%TabOutput, tab == "output"], [%TabProblems, tab == "problems"]]:
+		pair[0].theme_type_variation = "ChipCurrent" if pair[1] else "Chip"
+
+
+## 컴파일 에러·경고를 카드로. 누르면 IDE 의 그 줄로 간다.
+func _render_problems(diagnostics: Array) -> void:
+	for c in %Problems.get_children():
+		c.queue_free()
+	var errors := diagnostics.filter(func(d): return d.level == "error")
+	var shown := errors + diagnostics.filter(func(d): return d.level != "error")
+	%TabProblems.text = "문제 %d" % shown.size() if not shown.is_empty() else "문제"
+	if shown.is_empty():
+		var none := Label.new()
+		none.text = "문제가 없어요."
+		none.add_theme_color_override("font_color", Palette.TEXT3)
+		none.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+		%Problems.add_child(none)
+		return
+	for d in shown:
+		%Problems.add_child(_problem_card(d))
+
+
+func _problem_card(d: Dictionary) -> Control:
+	var is_error: bool = d.level == "error"
+	var card := Button.new()
+	card.focus_mode = Control.FOCUS_NONE
+	card.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var c: Color = Palette.RED if is_error else Palette.WARN
+	var sb := UiTheme.box(Palette.EDITOR, 8, 12, 8)
+	sb.border_width_left = 3
+	sb.border_color = c
+	var hover := sb.duplicate()
+	hover.bg_color = Palette.PANEL_HI
+	card.add_theme_stylebox_override("normal", sb)
+	card.add_theme_stylebox_override("hover", hover)
+	card.add_theme_stylebox_override("pressed", hover)
+	card.custom_minimum_size = Vector2(0, 52)
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.offset_left = 14
+	box.offset_top = 6
+	box.offset_right = -12
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override("separation", 2)
+	var head := HBoxContainer.new()
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var msg := Label.new()
+	var lines := String(d.message).split("\n")
+	msg.text = ("error: " if is_error else "warning: ") + lines[0]
+	msg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	msg.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	msg.add_theme_font_override("font", Palette.code_font())
+	msg.add_theme_font_size_override("font_size", Palette.SIZE_CODE)
+	msg.add_theme_color_override("font_color", c)
+	var where := Label.new()
+	where.text = "%s:%d:%d  IDE 에서 열기 →" % [String(d.file).get_file(), d.line, d.col]
+	where.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+	where.add_theme_color_override("font_color", Palette.SKY)
+	head.add_child(msg)
+	head.add_child(where)
+	box.add_child(head)
+	if lines.size() > 1:
+		var more := Label.new()
+		more.text = lines[1].strip_edges()
+		more.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		more.add_theme_font_override("font", Palette.code_font())
+		more.add_theme_font_size_override("font_size", Palette.SIZE_SMALL)
+		more.add_theme_color_override("font_color", Palette.TEXT2)
+		box.add_child(more)
+	card.add_child(box)
+	card.tooltip_text = String(d.message)
+	card.pressed.connect(func(): _open_ide(d))
+	return card
+
+
 func _render_console(tick: int) -> void:
 	if result.is_empty():
 		return
