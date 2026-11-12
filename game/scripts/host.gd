@@ -71,15 +71,10 @@ func _ready() -> void:
 	for p in packs:
 		%PackPicker.add_item(p.name)
 	%PackPicker.item_selected.connect(func(i): _select_pack(i, -1))
-	%ChapterPicker.item_selected.connect(func(i):
-		var ch: Dictionary = pack.chapters[i]
-		# 그 장에서 아직 깨지 않은 첫 레벨로 간다.
-		var target: int = ch.from - 1
-		for n in range(ch.from - 1, ch.to):
-			if not progress.get(pack.levels[n].id, {}).get("cleared", false):
-				target = n
-				break
-		select_level(target))
+	%LevelPicker.item_selected.connect(func(index: int):
+		var target: int = %LevelPicker.get_item_id(index)
+		if target != level:
+			select_level(target))
 
 	%Hint.pressed.connect(func(): _log("힌트: " + lesson().hint.replace("`", ""), "warn"))
 	%Solution.pressed.connect(_toggle_solution)
@@ -125,12 +120,23 @@ func _ready() -> void:
 
 
 func _style_static_nodes() -> void:
-	%BrandName.theme_type_variation = "PixelTitle"
 	%LessonTitle.theme_type_variation = "PixelTitle"
-	for l in [%Progress, %ChapterName, %ConsoleLabel, %TickLabel, %StatusTitle]:
+	for l in [%Progress, %ChapterName, %ConsoleLabel, %TickLabel, %StatusTitle, %GoalLabel, %InspectorLabel, %Slash]:
 		l.add_theme_font_override("font", Palette.pixel_font())
-	%BrandSub.add_theme_color_override("font_color", Palette.DIM)
-	%BrandSub.add_theme_font_size_override("font_size", 12)
+	%Slash.add_theme_color_override("font_color", Palette.TEXT3)
+	%Slash.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
+	%GoalLabel.add_theme_color_override("font_color", Palette.ACCENT)
+	%GoalLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
+	%GoalText.callouts = false
+	var goal := UiTheme.box(Color(Palette.ACCENT, 0.08), 8, 14, 10)
+	goal.border_width_left = 3
+	goal.border_color = Palette.ACCENT
+	%GoalCard.add_theme_stylebox_override("panel", goal)
+	%InspectorLabel.add_theme_color_override("font_color", Palette.TEXT3)
+	%InspectorLabel.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
+	%Progress.add_theme_color_override("font_color", Palette.GREEN)
+	for p in [%PackPicker, %LevelPicker]:
+		p.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 	%ChapterName.add_theme_color_override("font_color", Palette.DIM)
 	%ChapterName.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 
@@ -152,7 +158,6 @@ func _style_static_nodes() -> void:
 	%Console.add_theme_constant_override("line_separation", 3)
 	%InspectorText.add_theme_font_override("normal_font", Palette.code_font())
 	%InspectorText.add_theme_font_size_override("normal_font_size", 13)
-	%Inspector.add_theme_stylebox_override("panel", UiTheme.box(Palette.EDITOR, 8, 12, 8))
 	for b in [%Back, %Play, %Forward, %Speed]:
 		b.add_theme_font_size_override("font_size", 13)
 
@@ -293,7 +298,7 @@ func lesson() -> Dictionary:
 func _select_pack(index: int, start_level: int) -> void:
 	pack = packs[index]
 	%PackPicker.select(index)
-	%BrandSub.text = pack.get("tagline", "")
+	%PackPicker.tooltip_text = "게임팩 바꾸기 · " + String(pack.get("tagline", ""))
 	var ws: Dictionary = JsonUtil.parse(core.ensure_workspace(root, packs_dir, pack.id, git_name, git_email))
 	if not ws.get("ok", false):
 		_set_phase("failed", "작업 폴더를 준비하지 못했어요: %s" % ws.get("error", ""))
@@ -352,24 +357,28 @@ func _chapter() -> Dictionary:
 
 func _render_lesson() -> void:
 	var l := lesson()
-	for c in %Levels.get_children():
-		c.queue_free()
 	var chapters: Array = pack.get("chapters", [])
 	var ch := _chapter()
-	%ChapterPicker.visible = not chapters.is_empty()
-	if not chapters.is_empty():
-		%ChapterPicker.clear()
+	var cleared_of := func(n: int) -> bool: return progress.get(pack.levels[n].id, {}).get("cleared", false)
+
+	# 레벨 고르기: 장이 있는 팩은 장 이름으로 묶는다.
+	%LevelPicker.clear()
+	for n in pack.levels.size():
 		for c in chapters:
-			var done_all: bool = range(c.from - 1, c.to).all(func(n): return progress.get(pack.levels[n].id, {}).get("cleared", false))
-			%ChapterPicker.add_item(("✓ " if done_all else "") + c.name)
-		%ChapterPicker.select(chapters.find(ch))
+			if c.from - 1 == n:
+				%LevelPicker.add_separator(c.name)
+		%LevelPicker.add_item(("✓ " if cleared_of.call(n) else "") + "%d. %s" % [n + 1, pack.levels[n].title], n)
+	%LevelPicker.select(%LevelPicker.get_item_index(level))
+
+	# 레벨 칩: 지금 장(장이 없으면 전부)
+	for c in %Levels.get_children():
+		c.queue_free()
 	var lo: int = ch.from - 1 if not ch.is_empty() else 0
 	var hi: int = ch.to if not ch.is_empty() else pack.levels.size()
 	for i in range(lo, hi):
 		var b := Button.new()
 		b.text = str(i - lo + 1)
-		var cleared: bool = progress.get(pack.levels[i].id, {}).get("cleared", false)
-		b.theme_type_variation = "ChipCurrent" if i == level else ("ChipDone" if cleared else "Chip")
+		b.theme_type_variation = "ChipCurrent" if i == level else ("ChipDone" if cleared_of.call(i) else "Chip")
 		b.focus_mode = Control.FOCUS_NONE
 		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		b.tooltip_text = pack.levels[i].title
@@ -377,19 +386,28 @@ func _render_lesson() -> void:
 			if i != level:
 				select_level(i))
 		%Levels.add_child(b)
-	var done: int = pack.levels.filter(func(x): return progress.get(x.id, {}).get("cleared", false)).size()
-	%Progress.text = "클리어 %d / %d" % [done, pack.levels.size()]
-	var record := ""
+	var done: int = range(pack.levels.size()).filter(func(n): return cleared_of.call(n)).size()
+	%Progress.text = "%d / %d" % [done, pack.levels.size()]
+
+	var meta := PackedStringArray()
+	if not ch.is_empty():
+		meta.append(ch.name)
+	meta.append("레벨 %d / %d" % [level - lo + 1, hi - lo])
 	var best: Dictionary = progress.get(l.id, {}).get("best", {})
 	if not best.is_empty():
-		record = " · 최고 기록 %d%s, %d줄" % [best.ticks, pack.get("tick", "틱"), best.lines]
-	if ch.is_empty():
-		%ChapterName.text = "%s · 레벨 %d / %d%s" % [pack.name, level + 1, pack.levels.size(), record]
-		%LessonTitle.text = "%d. %s" % [level + 1, l.title]
-	else:
-		%ChapterName.text = "%s · %s · 레벨 %d / %d%s" % [pack.name, ch.name, level - lo + 1, hi - lo, record]
-		%LessonTitle.text = "%d. %s" % [level - lo + 1, l.title]
-	var body: String = l.lesson
+		meta.append("최고 기록 %d%s, %d줄" % [best.ticks, pack.get("tick", "틱"), best.lines])
+	%ChapterName.text = " · ".join(meta)
+	%LessonTitle.text = "%d. %s" % [level - lo + 1, l.title]
+
+	# 목표는 맨 위 카드에 고정하고, 본문에서는 뺀다.
+	var goal := _goal_text().trim_prefix("목표:").strip_edges()
+	%GoalCard.visible = goal != ""
+	%GoalText.markdown = goal
+	var paras := PackedStringArray()
+	for para in String(l.lesson).split("\n\n"):
+		if not para.strip_edges().begins_with("목표:"):
+			paras.append(para)
+	var body := "\n\n".join(paras)
 	if show_solution:
 		body += "\n\n## 정답\n\n```rust\n%s\n```" % l.solution.strip_edges()
 	%LessonBody.markdown = body
@@ -708,7 +726,7 @@ func _reset_level() -> void:
 
 func _toggle_sound() -> void:
 	Sfx.enabled = not Sfx.enabled
-	%Sound.text = "소리 켜짐" if Sfx.enabled else "소리 꺼짐"
+	%Sound.text = "소리" if Sfx.enabled else "음소거"
 
 
 # ── 타임라인 ─────────────────────────────────────────────────────

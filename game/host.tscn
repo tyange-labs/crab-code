@@ -20,10 +20,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 14
+theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
 
 [node name="Root" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
@@ -31,27 +31,14 @@ theme_override_constants/separation = 8
 
 [node name="Header" type="HBoxContainer" parent="Margin/Root"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="Logo" type="Control" parent="Margin/Root/Header"]
-custom_minimum_size = Vector2(44, 44)
-layout_mode = 2
-script = ExtResource("2_logo")
-
-[node name="Brand" type="VBoxContainer" parent="Margin/Root/Header"]
+custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_constants/separation = 0
-
-[node name="BrandName" type="Label" parent="Margin/Root/Header/Brand"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Crab Code"
-
-[node name="BrandSub" type="Label" parent="Margin/Root/Header/Brand"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "IDE 로 짜는 게임"
+tooltip_text = "Crab Code"
+script = ExtResource("2_logo")
 
 [node name="PackPicker" type="OptionButton" parent="Margin/Root/Header"]
 unique_name_in_owner = true
@@ -59,36 +46,48 @@ layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
 tooltip_text = "게임팩 바꾸기"
+flat = true
 
-[node name="Spacer" type="Control" parent="Margin/Root/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Progress" type="Label" parent="Margin/Root/Header"]
+[node name="Slash" type="Label" parent="Margin/Root/Header"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 4
+text = "/"
 
-[node name="ChapterPicker" type="OptionButton" parent="Margin/Root/Header"]
+[node name="LevelPicker" type="OptionButton" parent="Margin/Root/Header"]
 unique_name_in_owner = true
-visible = false
+custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
-tooltip_text = "장 고르기"
+tooltip_text = "레벨 고르기"
+flat = true
+text_overrun_behavior = 3
+fit_to_longest_item = false
+
+[node name="HeaderSpacer" type="Control" parent="Margin/Root/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Levels" type="HBoxContainer" parent="Margin/Root/Header"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_constants/separation = 5
+theme_override_constants/separation = 4
+
+[node name="Progress" type="Label" parent="Margin/Root/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+tooltip_text = "깬 레벨 / 전체"
 
 [node name="Sound" type="Button" parent="Margin/Root/Header"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
-text = "소리 켜짐"
+tooltip_text = "소리 켜기·끄기"
+theme_type_variation = &"OutlineButton"
+text = "소리"
 
 [node name="StatusBar" type="PanelContainer" parent="Margin/Root"]
 unique_name_in_owner = true
@@ -134,30 +133,50 @@ focus_mode = 0
 [node name="Body" type="HBoxContainer" parent="Margin/Root"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="Left" type="VBoxContainer" parent="Margin/Root/Body"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 0.8
-theme_override_constants/separation = 10
+size_flags_stretch_ratio = 0.5
+theme_override_constants/separation = 8
 
 [node name="LessonPanel" type="PanelContainer" parent="Margin/Root/Body/Left"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
 [node name="VBox" type="VBoxContainer" parent="Margin/Root/Body/Left/LessonPanel"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
-[node name="ChapterName" type="Label" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
+[node name="GoalCard" type="PanelContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox/GoalCard"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="GoalLabel" type="Label" parent="Margin/Root/Body/Left/LessonPanel/VBox/GoalCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "목표"
+
+[node name="GoalText" type="Control" parent="Margin/Root/Body/Left/LessonPanel/VBox/GoalCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("3_md")
 
 [node name="LessonTitle" type="Label" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 3
+
+[node name="ChapterName" type="Label" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text_overrun_behavior = 3
 
 [node name="LessonScroll" type="ScrollContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
 unique_name_in_owner = true
@@ -171,36 +190,43 @@ layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("3_md")
 
-[node name="Buttons" type="HBoxContainer" parent="Margin/Root/Body/Left"]
+[node name="Buttons" type="HBoxContainer" parent="Margin/Root/Body/Left/LessonPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Hint" type="Button" parent="Margin/Root/Body/Left/Buttons"]
+[node name="Hint" type="Button" parent="Margin/Root/Body/Left/LessonPanel/VBox/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
+theme_type_variation = &"OutlineButton"
 text = "힌트"
 
-[node name="Solution" type="Button" parent="Margin/Root/Body/Left/Buttons"]
+[node name="Solution" type="Button" parent="Margin/Root/Body/Left/LessonPanel/VBox/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
+theme_type_variation = &"OutlineButton"
 text = "정답 보기"
 
-[node name="Reset" type="Button" parent="Margin/Root/Body/Left/Buttons"]
+[node name="ButtonsSpacer" type="Control" parent="Margin/Root/Body/Left/LessonPanel/VBox/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Reset" type="Button" parent="Margin/Root/Body/Left/LessonPanel/VBox/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 tooltip_text = "파일을 처음 코드로 되돌려요. 지금 코드는 git 에 커밋해 둬요."
+theme_type_variation = &"OutlineButton"
 text = "처음 코드로"
 
 [node name="Right" type="VBoxContainer" parent="Margin/Root/Body"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 1.2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="WorldPanel" type="PanelContainer" parent="Margin/Root/Body/Right"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 2.4
@@ -263,34 +289,49 @@ layout_mode = 2
 focus_mode = 0
 text = "1x"
 
-[node name="Inspector" type="PanelContainer" parent="Margin/Root/Body/Right/WorldPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="InspectorText" type="RichTextLabel" parent="Margin/Root/Body/Right/WorldPanel/VBox/Inspector"]
-unique_name_in_owner = true
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-selection_enabled = true
-
-[node name="ConsolePanel" type="PanelContainer" parent="Margin/Root/Body/Right"]
+[node name="Bottom" type="HBoxContainer" parent="Margin/Root/Body/Right"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 8
 
-[node name="VBox" type="VBoxContainer" parent="Margin/Root/Body/Right/ConsolePanel"]
+[node name="ConsolePanel" type="PanelContainer" parent="Margin/Root/Body/Right/Bottom"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBox" type="VBoxContainer" parent="Margin/Root/Body/Right/Bottom/ConsolePanel"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ConsoleLabel" type="Label" parent="Margin/Root/Body/Right/ConsolePanel/VBox"]
+[node name="ConsoleLabel" type="Label" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "출력 · 타임라인을 따라 쌓여요"
+text = "출력"
 
-[node name="Console" type="RichTextLabel" parent="Margin/Root/Body/Right/ConsolePanel/VBox"]
+[node name="Console" type="RichTextLabel" parent="Margin/Root/Body/Right/Bottom/ConsolePanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 bbcode_enabled = true
 scroll_following = true
+selection_enabled = true
+
+[node name="Inspector" type="PanelContainer" parent="Margin/Root/Body/Right/Bottom"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(336, 0)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Margin/Root/Body/Right/Bottom/Inspector"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="InspectorLabel" type="Label" parent="Margin/Root/Body/Right/Bottom/Inspector/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "살펴보기"
+
+[node name="InspectorText" type="RichTextLabel" parent="Margin/Root/Body/Right/Bottom/Inspector/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
 selection_enabled = true
