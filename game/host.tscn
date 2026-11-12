@@ -306,7 +306,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 32)
 layout_mode = 2
 focus_mode = 0
-tooltip_text = "한 틱 뒤로"
+tooltip_text = "한 틱 뒤로 (←)"
 text = "◀"
 
 [node name="Play" type="Button" parent="Margin/Root/Body/Right/WorldPanel/VBox/Timeline"]
@@ -314,6 +314,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(72, 32)
 layout_mode = 2
 focus_mode = 0
+tooltip_text = "재생·일시정지 (Space)"
 text = "재생"
 
 [node name="Forward" type="Button" parent="Margin/Root/Body/Right/WorldPanel/VBox/Timeline"]
@@ -321,7 +322,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 32)
 layout_mode = 2
 focus_mode = 0
-tooltip_text = "한 틱 앞으로"
+tooltip_text = "한 틱 앞으로 (→)"
 text = "▶"
 
 [node name="Slider" type="HSlider" parent="Margin/Root/Body/Right/WorldPanel/VBox/Timeline"]
@@ -338,12 +339,10 @@ custom_minimum_size = Vector2(76, 0)
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Speed" type="Button" parent="Margin/Root/Body/Right/WorldPanel/VBox/Timeline"]
+[node name="Speeds" type="HBoxContainer" parent="Margin/Root/Body/Right/WorldPanel/VBox/Timeline"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(56, 32)
 layout_mode = 2
-focus_mode = 0
-text = "1x"
+theme_override_constants/separation = 2
 
 [node name="Bottom" type="HBoxContainer" parent="Margin/Root/Body/Right"]
 layout_mode = 2

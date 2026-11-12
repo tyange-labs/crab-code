@@ -7,7 +7,7 @@ extends Control
 
 const SETTINGS_PATH := "user://host.json"
 const TICKS_PER_SECOND := 5.0
-const SPEEDS := [1.0, 2.0, 4.0, 0.5]
+const SPEEDS := [0.5, 1.0, 2.0, 4.0]
 const WATCH_INTERVAL := 0.4
 
 var core := CrabCore.new()
@@ -31,7 +31,8 @@ var phase := "idle" # idle | building | ready | won | failed
 var result: Dictionary = {}
 var playing := false
 var autoplay := true
-var speed_idx := 0
+var speed_idx := 1
+var _marks: TimelineMarks
 var show_solution := false
 var confirm_solution := false
 
@@ -96,9 +97,20 @@ func _ready() -> void:
 	%Play.pressed.connect(_toggle_play)
 	%Back.pressed.connect(func(): _step_by(-1))
 	%Forward.pressed.connect(func(): _step_by(1))
-	%Speed.pressed.connect(func():
-		speed_idx = (speed_idx + 1) % SPEEDS.size()
-		%Speed.text = ("%sx" % SPEEDS[speed_idx]).replace(".0x", "x"))
+	var group := ButtonGroup.new()
+	for i in SPEEDS.size():
+		var b := Button.new()
+		b.text = ("%sx" % SPEEDS[i]).replace(".0x", "x")
+		b.toggle_mode = true
+		b.button_group = group
+		b.button_pressed = i == speed_idx
+		b.focus_mode = Control.FOCUS_NONE
+		b.theme_type_variation = "ChipCurrent" if i == speed_idx else "Chip"
+		b.tooltip_text = "재생 속도 (%d)" % (i + 1)
+		b.pressed.connect(func(): _set_speed(i))
+		%Speeds.add_child(b)
+	_marks = TimelineMarks.new()
+	%Slider.add_child(_marks)
 	%Slider.value_changed.connect(_on_slider)
 
 	if packs.is_empty():
@@ -182,14 +194,91 @@ func _style_static_nodes() -> void:
 	%Console.add_theme_constant_override("line_separation", 3)
 	%InspectorText.add_theme_font_override("normal_font", Palette.code_font())
 	%InspectorText.add_theme_font_size_override("normal_font_size", 13)
-	for b in [%Back, %Play, %Forward, %Speed]:
-		b.add_theme_font_size_override("font_size", 13)
+	for b in [%Back, %Play, %Forward]:
+		b.add_theme_font_size_override("font_size", Palette.PIXEL_SIZE)
 
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F5:
 		get_viewport().set_input_as_handled()
 		run(true)
+
+
+## 단축키. 글자를 입력하는 칸(처음 실행 창 등)이 먼저 받으므로 _unhandled_input 에서 처리한다.
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.pressed or not setup_dialog.is_empty():
+		return
+	var e := event as InputEventKey
+	var cmd := e.is_command_or_control_pressed()
+	var handled := true
+	match e.keycode:
+		KEY_SPACE:
+			_toggle_play()
+		KEY_LEFT:
+			_step_by(-1)
+		KEY_RIGHT:
+			_step_by(1)
+		KEY_HOME:
+			_jump_to(0.0)
+		KEY_END:
+			_jump_to(INF)
+		KEY_1, KEY_2, KEY_3, KEY_4:
+			if cmd:
+				handled = false
+			else:
+				_set_speed(e.keycode - KEY_1)
+		KEY_R when not cmd:
+			if not result.is_empty():
+				_jump_to(0.0)
+				_toggle_play()
+		KEY_H when not cmd:
+			_toggle_hint()
+		KEY_O when cmd:
+			_open_ide()
+		KEY_E when cmd:
+			if not _first_error.is_empty():
+				_open_ide(_first_error)
+		KEY_ENTER, KEY_KP_ENTER:
+			if phase == "won" and level + 1 < pack.levels.size():
+				select_level(level + 1)
+			else:
+				handled = false
+		_:
+			handled = false
+	if handled:
+		get_viewport().set_input_as_handled()
+
+
+## 타임라인 위 표시: 사건이 있는 틱(한 가지 색)과 끝의 결과(성공 초록·실패 빨강).
+## 사건 종류마다 색을 나누려면 팩이 events 에 kind 를 실어야 한다 (design/UI_REDESIGN.md 5장).
+func _update_marks() -> void:
+	var ticks: Array = []
+	if not result.is_empty():
+		for t in range(1, view.last_tick() + 1):
+			if not view.frame_at(t).get("events", []).is_empty():
+				ticks.append(t)
+	_marks.ticks = ticks
+	_marks.last = view.last_tick()
+	_marks.outcome = "" if result.is_empty() else ("won" if result.won else "failed")
+	_marks.queue_redraw()
+
+
+func _set_speed(i: int) -> void:
+	speed_idx = clampi(i, 0, SPEEDS.size() - 1)
+	for n in %Speeds.get_child_count():
+		var b: Button = %Speeds.get_child(n)
+		b.set_pressed_no_signal(n == speed_idx)
+		b.theme_type_variation = "ChipCurrent" if n == speed_idx else "Chip"
+
+
+func _jump_to(t: float) -> void:
+	if result.is_empty():
+		return
+	playing = false
+	%Play.text = "재생"
+	view.time = clampf(t, 0.0, view.last_tick())
+	_shown_tick = -1
+	_sync_timeline()
 
 
 # ── 설정 ─────────────────────────────────────────────────────────
@@ -498,6 +587,8 @@ func _status(kind: String, title: String, detail := "", action := "") -> void:
 	var labels := {"ide": "IDE 로 열기", "run": "실행 F5", "error": "IDE 에서 보기", "next": "다음 레벨", "replay": "다시 보기"}
 	%StatusAction.visible = action != ""
 	%StatusAction.text = labels.get(action, "")
+	var keys := {"ide": "⌘O", "run": "F5", "error": "⌘E", "next": "Enter", "replay": "R"}
+	%StatusAction.tooltip_text = "단축키 " + keys.get(action, "") if keys.has(action) else ""
 	%StatusAction.theme_type_variation = "PrimaryButton" if action in ["ide", "next", "run"] else ("DangerButton" if action == "error" else "OutlineButton")
 
 
@@ -620,6 +711,7 @@ func _on_run_result(r: Dictionary) -> void:
 	_first_error = {}
 	if not r.compiled:
 		result = {}
+		_update_marks()
 		# 코드가 컴파일되지 않아도 레벨의 처음 모습은 보여 준다.
 		if r.has("preview"):
 			view.setup(r.preview.map, r.preview.frames)
@@ -642,6 +734,7 @@ func _on_run_result(r: Dictionary) -> void:
 	if r.frames.is_empty() or r.map == null:
 		# 첫 모습도 나오기 전에 멈췄다 (시작하자마자 패닉, 시간 초과 등).
 		result = {}
+		_update_marks()
 		if r.has("preview"):
 			view.setup(r.preview.map, r.preview.frames)
 		for log in r.logs:
@@ -651,6 +744,7 @@ func _on_run_result(r: Dictionary) -> void:
 		return
 	result = r
 	view.setup(r.map, r.frames)
+	_update_marks()
 	_shown_tick = -1
 	if autoplay:
 		playing = true
@@ -798,7 +892,9 @@ func _on_slider(value: float) -> void:
 
 func _sync_timeline() -> void:
 	var has := not result.is_empty()
-	for b in [%Back, %Play, %Forward, %Speed]:
+	for b in [%Back, %Play, %Forward]:
+		b.disabled = not has
+	for b in %Speeds.get_children():
 		b.disabled = not has
 	%Slider.editable = has
 	if not view:
@@ -910,3 +1006,29 @@ func _render_inspector() -> void:
 	elif tick >= view.last_tick():
 		lines.append("[color=%s]시뮬레이션 끝[/color]" % dim)
 	%InspectorText.text = "\n".join(lines)
+
+
+## 타임라인 슬라이더 위에 사건 틱을 그리는 막대들.
+class TimelineMarks extends Control:
+	var ticks: Array = []
+	var last := 0
+	var outcome := ""
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	func _x(t: int) -> float:
+		# 슬라이더 손잡이 반쪽만큼 양끝을 비운다.
+		var inset := 8.0
+		return inset + (size.x - inset * 2.0) * (float(t) / maxf(last, 1))
+
+	func _draw() -> void:
+		if last <= 0:
+			return
+		var h := size.y
+		for t in ticks:
+			draw_rect(Rect2(round(_x(t)) - 1.0, h * 0.5 - 7.0, 2.0, 14.0), Color(Palette.WARN, 0.85))
+		if outcome != "":
+			var c := Palette.GREEN if outcome == "won" else Palette.RED
+			draw_rect(Rect2(round(_x(last)) - 1.0, h * 0.5 - 9.0, 3.0, 18.0), c)
